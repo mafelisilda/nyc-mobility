@@ -44,9 +44,18 @@ def transform_taxi_silver(df: DataFrame) -> DataFrame:
         .filter(
             F.col("pickup_datetime").isNotNull()
             & F.col("dropoff_datetime").isNotNull()
-            & (F.col("dropoff_datetime") >= F.col("pickup_datetime"))
+            & (
+                F.col("dropoff_datetime")
+                >= F.col("pickup_datetime")
+            )
             & F.col("pickup_location_id").isNotNull()
             & F.col("dropoff_location_id").isNotNull()
+            & (
+                F.date_format(
+                    F.col("pickup_datetime"),
+                    "yyyy-MM"
+                )
+                == F.col("source_month")
+            )
         )
-        .dropDuplicates(["trip_hash"])
-    )
+    )       
