@@ -77,7 +77,7 @@ taxi_outside_range = count_rows_outside_date_range(
     taxi,
     "pickup_datetime",
     "2026-03-01",
-    "2026-03-31",
+    "2026-05-31",
 )
 
 print(
@@ -124,7 +124,7 @@ weather_outside_range = count_rows_outside_date_range(
     weather,
     "weather_datetime",
     "2026-03-01",
-    "2026-03-31",
+    "2026-05-31",
 )
 
 print(
@@ -132,6 +132,36 @@ print(
     f"{weather_outside_range}"
 )
 
+# Check hourly record counts by month
+
+weather_month_counts = (
+    weather
+    .withColumn(
+        "weather_month",
+        F.date_format(
+            "weather_datetime",
+            "yyyy-MM",
+        ),
+    )
+    .groupBy("weather_month")
+    .count()
+    .orderBy("weather_month")
+)
+
+display(weather_month_counts)
+
+expected_weather_counts = {
+    "2026-03": 744,
+    "2026-04": 720,
+    "2026-05": 744,
+}
+
+actual_weather_counts = {
+    row["weather_month"]: row["count"]
+    for row in weather_month_counts.collect()
+}
+
+print(f"Weather counts by month: {actual_weather_counts}")
 
 # COMMAND ----------
 # 6. ZONE DATA QUALITY CHECKS
@@ -171,7 +201,7 @@ print(
 # 7. ASSERT EXPECTED QUALITY RULES
 
 assert taxi_row_count > 0
-assert weather_row_count == 744
+assert weather_row_count == 2208
 assert zone_row_count == 265
 
 assert all(
@@ -190,6 +220,7 @@ assert all(
 
 assert weather_duplicate_hours == 0
 assert weather_outside_range == 0
+assert actual_weather_counts == expected_weather_counts
 
 assert zone_nulls["location_id"] == 0
 assert zone_nulls["borough"] == 0
