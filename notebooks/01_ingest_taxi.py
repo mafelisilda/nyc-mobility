@@ -62,30 +62,10 @@ BRONZE_TABLE = "nyc_mobility.bronze.green_taxi"
 
 print(f"Bronze table: {BRONZE_TABLE}")
 
-
 # COMMAND ----------
-# 5. HELPER FUNCTION: CHECK WHETHER A FILE WAS ALREADY PROCESSED
-# For the taxi source, we use the source filename as our ingestion signal.
+# 5. CHECK WHETHER THE SOURCE FILE WAS ALREADY PROCESSED
+# The reusable check is defined in src/ingestion/taxi.py.
 
-def file_already_processed(table_name: str, file_name: str) -> bool:
-    """
-    Return True if the source file has already been loaded
-    into the Bronze table.
-    """
-
-    try:
-        return (
-            spark.table(table_name)
-            .filter(F.col("source_file") == file_name)
-            .limit(1)
-            .count()
-            > 0
-        )
-    except Exception:
-        return False
-
-
-# Check whether the requested monthly file has already been loaded.
 already_processed = file_already_processed(
     spark,
     BRONZE_TABLE,
