@@ -3,6 +3,8 @@
 # COMMAND ----------
 # 1. IMPORTS
 
+from calendar import monthrange
+
 from pyspark.sql import functions as F
 
 
@@ -27,27 +29,32 @@ print(f"Zones Bronze rows: {zones.count():,}")
 
 
 # COMMAND ----------
-# 4. TAXI BRONZE VALIDATION
+# 4. DISCOVER TAXI MONTHS DYNAMICALLY
+
+taxi_months = sorted(
+    {
+        row["source_month"]
+        for row in (
+            taxi
+            .select("source_month")
+            .distinct()
+            .collect()
+        )
+        if row["source_month"] is not None
+    }
+)
+
+print(f"Taxi months found: {taxi_months}")
+
+assert len(taxi_months) > 0, (
+    "No taxi source months were found in Bronze."
+)
+
+
+# COMMAND ----------
+# 5. VALIDATE TAXI FILE UNIQUENESS
 
 print("=== TAXI BRONZE VALIDATION ===")
-
-expected_taxi_months = {
-    "2026-03",
-    "2026-04",
-    "2026-05",
-}
-
-actual_taxi_months = {
-    row["source_month"]
-    for row in (
-        taxi
-        .select("source_month")
-        .distinct()
-        .collect()
-    )
-}
-
-print(f"Taxi months found: {actual_taxi_months}")
 
 taxi_batch_counts = (
     taxi
@@ -62,6 +69,8 @@ taxi_batch_counts = (
 
 display(taxi_batch_counts)
 
+
+# One source file should map to one batch ID.
 duplicate_taxi_files = (
     taxi
     .select(
@@ -71,28 +80,75 @@ duplicate_taxi_files = (
     .distinct()
     .groupBy("source_file")
     .count()
-    .filter(
-        F.col("count") > 1
-    )
+    .filter(F.col("count") > 1)
     .count()
 )
 
 print(
-    f"Taxi files associated with multiple batch IDs: "
+    "Taxi files associated with multiple batch IDs: "
     f"{duplicate_taxi_files}"
 )
 
 
+# One source month should map to one source file.
+taxi_files_per_month = (
+    taxi
+    .select(
+        "source_month",
+        "source_file",
+    )
+    .distinct()
+    .groupBy("source_month")
+    .count()
+)
+
+months_with_multiple_files = (
+    taxi_files_per_month
+    .filter(F.col("count") > 1)
+    .count()
+)
+
+print(
+    "Taxi months associated with multiple source files: "
+    f"{months_with_multiple_files}"
+)
+
+
 # COMMAND ----------
-# 5. WEATHER BRONZE VALIDATION
+# 6. BUILD EXPECTED WEATHER COUNTS DYNAMICALLY
+
+expected_weather_batches = {}
+
+for source_month in taxi_months:
+
+    year, month = map(
+        int,
+        source_month.split("-"),
+    )
+
+    expected_hours = (
+        monthrange(year, month)[1] * 24
+    )
+
+    batch_id = (
+        f"weather_"
+        f"{source_month.replace('-', '_')}"
+    )
+
+    expected_weather_batches[
+        batch_id
+    ] = expected_hours
+
+print(
+    "Expected weather batches: "
+    f"{expected_weather_batches}"
+)
+
+
+# COMMAND ----------
+# 7. VALIDATE WEATHER BATCHES
 
 print("=== WEATHER BRONZE VALIDATION ===")
-
-expected_weather_batches = {
-    "weather_2026_03": 744,
-    "weather_2026_04": 720,
-    "weather_2026_05": 744,
-}
 
 actual_weather_batches = {
     row["batch_id"]: row["count"]
@@ -105,13 +161,27 @@ actual_weather_batches = {
 }
 
 print(
-    f"Weather batch counts: "
+    "Actual weather batches: "
     f"{actual_weather_batches}"
 )
 
 
+# Only compare weather batches that correspond to taxi months.
+actual_required_weather_batches = {
+    batch_id: actual_weather_batches.get(
+        batch_id
+    )
+    for batch_id in expected_weather_batches
+}
+
+print(
+    "Required weather batch counts: "
+    f"{actual_required_weather_batches}"
+)
+
+
 # COMMAND ----------
-# 6. ZONE BRONZE VALIDATION
+# 8. VALIDATE TAXI ZONES
 
 print("=== TAXI ZONE BRONZE VALIDATION ===")
 
@@ -127,24 +197,43 @@ duplicate_zone_ids = (
     .count()
 )
 
+null_zone_ids = (
+    zones
+    .filter(
+        F.col("LocationID").isNull()
+    )
+    .count()
+)
+
 print(f"Zone row count: {zone_count:,}")
 print(
     f"Duplicate LocationIDs: "
     f"{duplicate_zone_ids}"
 )
+print(
+    f"Null LocationIDs: "
+    f"{null_zone_ids}"
+)
 
 
 # COMMAND ----------
-# 7. ASSERT BRONZE QUALITY RULES
+# 9. ASSERT BRONZE QUALITY RULES
 
 assert taxi.count() > 0
-assert actual_taxi_months == expected_taxi_months
-assert duplicate_taxi_files == 0
 
-assert weather.count() == 2208
-assert actual_weather_batches == expected_weather_batches
+assert duplicate_taxi_files == 0
+assert months_with_multiple_files == 0
+
+assert (
+    actual_required_weather_batches
+    == expected_weather_batches
+), (
+    "Weather batches are missing or have "
+    "unexpected hourly counts."
+)
 
 assert zone_count == 265
 assert duplicate_zone_ids == 0
+assert null_zone_ids == 0
 
 print("All Bronze validation checks passed.")
