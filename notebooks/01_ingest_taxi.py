@@ -4,7 +4,10 @@
 # 1. IMPORTS
 # PySpark functions are used to add metadata columns and query the Bronze table.
 
-from pyspark.sql import functions as F
+from src.ingestion.taxi import (
+    add_bronze_metadata,
+    file_already_processed,
+)
 
 
 # COMMAND ----------
@@ -84,6 +87,7 @@ def file_already_processed(table_name: str, file_name: str) -> bool:
 
 # Check whether the requested monthly file has already been loaded.
 already_processed = file_already_processed(
+    spark,
     BRONZE_TABLE,
     source_file
 )
@@ -125,28 +129,11 @@ else:
     # Bronze should preserve the source data while adding information
     # that allows us to trace where each row came from.
 
-    bronze_df = (
-        raw_df
-        .withColumn(
-            "source_system",
-            F.lit("nyc_tlc_green_taxi")
-        )
-        .withColumn(
-            "source_file",
-            F.lit(source_file)
-        )
-        .withColumn(
-            "source_month",
-            F.lit(process_month)
-        )
-        .withColumn(
-            "batch_id",
-            F.lit(batch_id)
-        )
-        .withColumn(
-            "ingested_at",
-            F.current_timestamp()
-        )
+    bronze_df = add_bronze_metadata(
+        df=raw_df,
+        source_file=source_file,
+        source_month=process_month,
+        batch_id=batch_id,
     )
 
 
