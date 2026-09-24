@@ -58,4 +58,5 @@ def transform_taxi_silver(df: DataFrame) -> DataFrame:
                 == F.col("source_month")
             )
         )
+        .dropDuplicates(["trip_hash"])
     )       
