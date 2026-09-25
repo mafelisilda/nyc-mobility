@@ -19,7 +19,7 @@ from src.ingestion.weather import (
 # COMMAND ----------
 # 2. CONFIGURATION
 
-GREEN_TAXI_BASE_PATH = (
+TAXI_LANDING_PATH = (
     "r2://ftw-b12-dataengineering@6338489909d41c2f78a0a2345a684267."
     "r2.cloudflarestorage.com/groups/week-08/group-c/landing/green_taxi"
 )
@@ -42,7 +42,7 @@ FILE_PATTERN = re.compile(
 # 3. DISCOVER AVAILABLE MONTHS FROM LANDING
 
 landing_entries = dbutils.fs.ls(
-    GREEN_TAXI_BASE_PATH
+    TAXI_LANDING_PATH
 )
 
 available_months = []

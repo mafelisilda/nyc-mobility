@@ -15,7 +15,6 @@ def transform_zones_silver(df: DataFrame) -> DataFrame:
         )
         .withColumnRenamed("Borough", "borough")
         .withColumnRenamed("Zone", "zone")
-        .withColumnRenamed("service_zone", "service_zone")
         .filter(F.col("location_id").isNotNull())
         .dropDuplicates(["location_id"])
     )
