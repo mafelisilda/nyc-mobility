@@ -5,8 +5,13 @@
       "displayName": "Data Quality Checks",
       "config": {
         "version": "1.1",
-        "source": "nyc_mobility.gold.dq_check_results",
+        "source": "SELECT 'Gold' AS source_layer, check_id, check_type, table_name, check_name, check_description, status, severity, checked_at, total_count, failed_count, pass_rate FROM nyc_mobility.gold.dq_check_results UNION ALL SELECT 'Bronze', 'bronze_gt_rc', 'row_count', 'bronze.green_taxi', 'Row Count', 'Total rows in bronze.green_taxi',\n       CASE WHEN cnt > 0 THEN 'PASS' ELSE 'FAIL' END, 'critical', CURRENT_TIMESTAMP(), CAST(cnt AS INT), 0, 1.0\nFROM (SELECT COUNT(*) AS cnt FROM nyc_mobility.bronze.green_taxi) UNION ALL SELECT 'Bronze', 'bronze_gt_nc', 'null_check', 'bronze.green_taxi', 'Null Check', 'Null values in key columns',\n       CASE WHEN nulls = 0 THEN 'PASS' ELSE 'FAIL' END, 'low', CURRENT_TIMESTAMP(), CAST(total AS INT), CAST(nulls AS INT),\n       CASE WHEN total > 0 THEN 1.0 - (CAST(nulls AS DOUBLE) / total) ELSE 1.0 END\nFROM (SELECT COUNT(*) AS total, SUM(CASE WHEN VendorID IS NULL OR lpep_pickup_datetime IS NULL THEN 1 ELSE 0 END) AS nulls FROM nyc_mobility.bronze.green_taxi) UNION ALL SELECT 'Bronze', 'bronze_gt_dc', 'duplicate_check', 'bronze.green_taxi', 'Duplicate Check', 'Duplicate records',\n       CASE WHEN dups = 0 THEN 'PASS' ELSE 'WARN' END, 'medium', CURRENT_TIMESTAMP(), CAST(total AS INT), CAST(dups AS INT),\n       CASE WHEN total > 0 THEN 1.0 - (CAST(dups AS DOUBLE) / total) ELSE 1.0 END\nFROM (SELECT COUNT(*) AS total, COUNT(*) - COUNT(DISTINCT VendorID, lpep_pickup_datetime) AS dups FROM nyc_mobility.bronze.green_taxi) UNION ALL SELECT 'Bronze', 'bronze_tz_rc', 'row_count', 'bronze.taxi_zones', 'Row Count', 'Total rows in bronze.taxi_zones',\n       CASE WHEN cnt > 0 THEN 'PASS' ELSE 'FAIL' END, 'critical', CURRENT_TIMESTAMP(), CAST(cnt AS INT), 0, 1.0\nFROM (SELECT COUNT(*) AS cnt FROM nyc_mobility.bronze.taxi_zones) UNION ALL SELECT 'Bronze', 'bronze_tz_nc', 'null_check', 'bronze.taxi_zones', 'Null Check', 'Null values in key columns',\n       CASE WHEN nulls = 0 THEN 'PASS' ELSE 'FAIL' END, 'low', CURRENT_TIMESTAMP(), CAST(total AS INT), CAST(nulls AS INT),\n       CASE WHEN total > 0 THEN 1.0 - (CAST(nulls AS DOUBLE) / total) ELSE 1.0 END\nFROM (SELECT COUNT(*) AS total, SUM(CASE WHEN LocationID IS NULL THEN 1 ELSE 0 END) AS nulls FROM nyc_mobility.bronze.taxi_zones) UNION ALL SELECT 'Bronze', 'bronze_tz_dc', 'duplicate_check', 'bronze.taxi_zones', 'Duplicate Check', 'Duplicate records',\n       CASE WHEN dups = 0 THEN 'PASS' ELSE 'WARN' END, 'medium', CURRENT_TIMESTAMP(), CAST(total AS INT), CAST(dups AS INT),\n       CASE WHEN total > 0 THEN 1.0 - (CAST(dups AS DOUBLE) / total) ELSE 1.0 END\nFROM (SELECT COUNT(*) AS total, COUNT(*) - COUNT(DISTINCT LocationID) AS dups FROM nyc_mobility.bronze.taxi_zones) UNION ALL SELECT 'Silver', 'silver_tt_rc', 'row_count', 'silver.taxi_trips', 'Row Count', 'Total rows in silver.taxi_trips',\n       CASE WHEN cnt > 0 THEN 'PASS' ELSE 'FAIL' END, 'critical', CURRENT_TIMESTAMP(), CAST(cnt AS INT), 0, 1.0\nFROM (SELECT COUNT(*) AS cnt FROM nyc_mobility.silver.taxi_trips) UNION ALL SELECT 'Silver', 'silver_tt_nc', 'null_check', 'silver.taxi_trips', 'Null Check', 'Null values in key columns',\n       CASE WHEN nulls = 0 THEN 'PASS' ELSE 'FAIL' END, 'low', CURRENT_TIMESTAMP(), CAST(total AS INT), CAST(nulls AS INT),\n       CASE WHEN total > 0 THEN 1.0 - (CAST(nulls AS DOUBLE) / total) ELSE 1.0 END\nFROM (SELECT COUNT(*) AS total, SUM(CASE WHEN VendorID IS NULL OR pickup_datetime IS NULL THEN 1 ELSE 0 END) AS nulls FROM nyc_mobility.silver.taxi_trips) UNION ALL SELECT 'Silver', 'silver_tt_dc', 'duplicate_check', 'silver.taxi_trips', 'Duplicate Check', 'Duplicate records',\n       CASE WHEN dups = 0 THEN 'PASS' ELSE 'WARN' END, 'medium', CURRENT_TIMESTAMP(), CAST(total AS INT), CAST(dups AS INT),\n       CASE WHEN total > 0 THEN 1.0 - (CAST(dups AS DOUBLE) / total) ELSE 1.0 END\nFROM (SELECT COUNT(*) AS total, COUNT(*) - COUNT(DISTINCT trip_hash) AS dups FROM nyc_mobility.silver.taxi_trips) UNION ALL SELECT 'Silver', 'silver_tz_rc', 'row_count', 'silver.taxi_zones', 'Row Count', 'Total rows in silver.taxi_zones',\n       CASE WHEN cnt > 0 THEN 'PASS' ELSE 'FAIL' END, 'critical', CURRENT_TIMESTAMP(), CAST(cnt AS INT), 0, 1.0\nFROM (SELECT COUNT(*) AS cnt FROM nyc_mobility.silver.taxi_zones) UNION ALL SELECT 'Silver', 'silver_tz_nc', 'null_check', 'silver.taxi_zones', 'Null Check', 'Null values in key columns',\n       CASE WHEN nulls = 0 THEN 'PASS' ELSE 'FAIL' END, 'low', CURRENT_TIMESTAMP(), CAST(total AS INT), CAST(nulls AS INT),\n       CASE WHEN total > 0 THEN 1.0 - (CAST(nulls AS DOUBLE) / total) ELSE 1.0 END\nFROM (SELECT COUNT(*) AS total, SUM(CASE WHEN location_id IS NULL THEN 1 ELSE 0 END) AS nulls FROM nyc_mobility.silver.taxi_zones) UNION ALL SELECT 'Silver', 'silver_tz_dc', 'duplicate_check', 'silver.taxi_zones', 'Duplicate Check', 'Duplicate records',\n       CASE WHEN dups = 0 THEN 'PASS' ELSE 'WARN' END, 'medium', CURRENT_TIMESTAMP(), CAST(total AS INT), CAST(dups AS INT),\n       CASE WHEN total > 0 THEN 1.0 - (CAST(dups AS DOUBLE) / total) ELSE 1.0 END\nFROM (SELECT COUNT(*) AS total, COUNT(*) - COUNT(DISTINCT location_id) AS dups FROM nyc_mobility.silver.taxi_zones)\n",
         "dimensions": [
+          {
+            "name": "source_layer",
+            "expr": "source_layer",
+            "displayName": "Source Layer"
+          },
           {
             "name": "check_id",
             "expr": "check_id"
@@ -267,8 +272,13 @@
       "displayName": "Data Freshness",
       "config": {
         "version": "1.1",
-        "source": "WITH fact_latest AS (\n  SELECT MAX(d.full_date) AS latest_date\n  FROM nyc_mobility.gold.fact_trip ft\n  JOIN nyc_mobility.gold.dim_date d ON ft.pickup_date_key = d.date_key\n) SELECT 'dim_date' AS table_name, 'full_date' AS freshness_column,\n       CAST(MAX(full_date) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), MAX(full_date)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), MAX(full_date)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_date GROUP BY 1, 2 UNION ALL SELECT 'fact_trip' AS table_name, 'pickup_date' AS freshness_column,\n       CAST((SELECT latest_date FROM fact_latest) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), (SELECT latest_date FROM fact_latest)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), (SELECT latest_date FROM fact_latest)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.fact_trip GROUP BY 1, 2 UNION ALL SELECT 'dim_hour' AS table_name, 'N/A' AS freshness_column,\n       'N/A' AS latest_data, NULL AS days_stale, 'UNKNOWN' AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_hour GROUP BY 1, 2, 3, 4, 5 UNION ALL SELECT 'dim_weather' AS table_name, 'N/A' AS freshness_column,\n       'N/A' AS latest_data, NULL AS days_stale, 'UNKNOWN' AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_weather GROUP BY 1, 2, 3, 4, 5 UNION ALL SELECT 'dim_zone' AS table_name, 'N/A' AS freshness_column,\n       'N/A' AS latest_data, NULL AS days_stale, 'UNKNOWN' AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_zone GROUP BY 1, 2, 3, 4, 5\n",
+        "source": "WITH fact_latest AS (\n  SELECT MAX(d.full_date) AS latest_date\n  FROM nyc_mobility.gold.fact_trip ft\n  JOIN nyc_mobility.gold.dim_date d ON ft.pickup_date_key = d.date_key\n) SELECT 'Bronze' AS source_layer, 'green_taxi' AS table_name, 'ingested_at' AS freshness_column,\n       CAST(MAX(ingested_at) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), MAX(ingested_at)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), MAX(ingested_at)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.bronze.green_taxi GROUP BY 1, 2 UNION ALL SELECT 'Bronze' AS source_layer, 'taxi_zones' AS table_name, 'ingested_at' AS freshness_column,\n       CAST(MAX(ingested_at) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), MAX(ingested_at)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), MAX(ingested_at)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.bronze.taxi_zones GROUP BY 1, 2 UNION ALL SELECT 'Silver' AS source_layer, 'taxi_trips' AS table_name, 'ingested_at' AS freshness_column,\n       CAST(MAX(ingested_at) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), MAX(ingested_at)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), MAX(ingested_at)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.silver.taxi_trips GROUP BY 1, 2 UNION ALL SELECT 'Silver' AS source_layer, 'taxi_zones' AS table_name, 'ingested_at' AS freshness_column,\n       CAST(MAX(ingested_at) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), MAX(ingested_at)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), MAX(ingested_at)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.silver.taxi_zones GROUP BY 1, 2 UNION ALL SELECT 'Gold' AS source_layer, 'dim_date' AS table_name, 'full_date' AS freshness_column,\n       CAST(MAX(full_date) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), MAX(full_date)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), MAX(full_date)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_date GROUP BY 1, 2 UNION ALL SELECT 'Gold' AS source_layer, 'fact_trip' AS table_name, 'pickup_date' AS freshness_column,\n       CAST((SELECT latest_date FROM fact_latest) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), (SELECT latest_date FROM fact_latest)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), (SELECT latest_date FROM fact_latest)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.fact_trip GROUP BY 1, 2 UNION ALL SELECT 'Gold' AS source_layer, 'dim_hour' AS table_name, 'N/A' AS freshness_column,\n       'N/A' AS latest_data, NULL AS days_stale, 'UNKNOWN' AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_hour GROUP BY 1, 2, 3, 4, 5 UNION ALL SELECT 'Gold' AS source_layer, 'dim_weather' AS table_name, 'N/A' AS freshness_column,\n       'N/A' AS latest_data, NULL AS days_stale, 'UNKNOWN' AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_weather GROUP BY 1, 2, 3, 4, 5 UNION ALL SELECT 'Gold' AS source_layer, 'dim_zone' AS table_name, 'N/A' AS freshness_column,\n       'N/A' AS latest_data, NULL AS days_stale, 'UNKNOWN' AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_zone GROUP BY 1, 2, 3, 4, 5\n",
         "dimensions": [
+          {
+            "name": "source_layer",
+            "expr": "source_layer",
+            "displayName": "Source Layer"
+          },
           {
             "name": "table_name",
             "expr": "table_name",
@@ -298,6 +308,60 @@
             "name": "row_count",
             "expr": "row_count",
             "displayName": "Row Count"
+          }
+        ],
+        "measures": [
+          {
+            "name": "table_count",
+            "expr": "COUNT(1)",
+            "displayName": "Table Count"
+          }
+        ]
+      }
+    },
+    {
+      "name": "quarantine",
+      "displayName": "Quarantine Records",
+      "config": {
+        "version": "1.1",
+        "source": "SELECT\n  'Silver' AS source_layer,\n  quarantine_reason,\n  source_file,\n  source_month,\n  batch_id,\n  quarantined_at,\n  VendorID,\n  lpep_pickup_datetime,\n  lpep_dropoff_datetime,\n  trip_distance,\n  fare_amount,\n  total_amount,\n  passenger_count\nFROM nyc_mobility.silver.taxi_trips_quarantine UNION ALL SELECT\n  'Bronze' AS source_layer,\n  CASE\n    WHEN lpep_pickup_datetime IS NOT NULL AND source_month IS NOT NULL\n         AND MONTH(lpep_pickup_datetime) != CAST(SUBSTRING(source_month, 6, 2) AS INT) THEN 'PICKUP_MONTH_MISMATCH'\n    WHEN lpep_pickup_datetime IS NOT NULL AND lpep_dropoff_datetime IS NOT NULL\n         AND lpep_dropoff_datetime < lpep_pickup_datetime THEN 'DROPOFF_BEFORE_PICKUP'\n    ELSE 'OTHER'\n  END AS quarantine_reason,\n  source_file,\n  source_month,\n  batch_id,\n  ingested_at AS quarantined_at,\n  VendorID,\n  lpep_pickup_datetime,\n  lpep_dropoff_datetime,\n  trip_distance,\n  fare_amount,\n  total_amount,\n  passenger_count\nFROM nyc_mobility.bronze.green_taxi WHERE\n  (lpep_pickup_datetime IS NOT NULL AND source_month IS NOT NULL\n   AND MONTH(lpep_pickup_datetime) != CAST(SUBSTRING(source_month, 6, 2) AS INT))\n  OR (lpep_pickup_datetime IS NOT NULL AND lpep_dropoff_datetime IS NOT NULL\n   AND lpep_dropoff_datetime < lpep_pickup_datetime)\n",
+        "dimensions": [
+          {
+            "name": "source_layer",
+            "expr": "source_layer",
+            "displayName": "Source Layer"
+          },
+          {
+            "name": "quarantine_reason",
+            "expr": "quarantine_reason",
+            "displayName": "Quarantine Reason"
+          },
+          {
+            "name": "source_file",
+            "expr": "source_file",
+            "displayName": "Source File"
+          },
+          {
+            "name": "source_month",
+            "expr": "source_month",
+            "displayName": "Source Month"
+          },
+          {
+            "name": "batch_id",
+            "expr": "batch_id",
+            "displayName": "Batch ID"
+          },
+          {
+            "name": "quarantined_at",
+            "expr": "quarantined_at",
+            "displayName": "Quarantined At"
+          }
+        ],
+        "measures": [
+          {
+            "name": "total_records",
+            "expr": "COUNT(1)",
+            "displayName": "Total Quarantined Records"
           }
         ]
       }
@@ -361,6 +425,10 @@
                   "datasetName": "freshness",
                   "fields": [
                     {
+                      "name": "source_layer",
+                      "expression": "`source_layer`"
+                    },
+                    {
                       "name": "table_name",
                       "expression": "`table_name`"
                     },
@@ -392,12 +460,18 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "title": "Data Freshness Status"
+                "title": {
+                  "value": "Data Freshness Status",
+                  "fields": []
+                }
               },
               "version": 2,
               "widgetType": "table",
               "encodings": {
                 "columns": [
+                  {
+                    "fieldName": "source_layer"
+                  },
                   {
                     "fieldName": "table_name"
                   },
@@ -424,9 +498,9 @@
             }
           },
           "position": {
-            "x": 0,
+            "x": 4,
             "y": 18,
-            "width": 12,
+            "width": 8,
             "height": 4
           }
         },
@@ -544,6 +618,10 @@
                   "datasetName": "data_quality",
                   "fields": [
                     {
+                      "name": "source_layer",
+                      "expression": "`source_layer`"
+                    },
+                    {
                       "name": "table_name",
                       "expression": "`table_name`"
                     },
@@ -575,12 +653,18 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "title": "Data Quality Check Results"
+                "title": {
+                  "value": "Data Quality Check Results",
+                  "fields": []
+                }
               },
               "version": 2,
               "widgetType": "table",
               "encodings": {
                 "columns": [
+                  {
+                    "fieldName": "source_layer"
+                  },
                   {
                     "fieldName": "table_name"
                   },
@@ -607,9 +691,9 @@
             }
           },
           "position": {
-            "x": 0,
+            "x": 4,
             "y": 25,
-            "width": 12,
+            "width": 8,
             "height": 6
           }
         },
@@ -620,7 +704,7 @@
               "lines": [
                 "## Data Quality\n",
                 "\n",
-                "Validate data integrity: missing values, duplicates, invalid records, and unexpected row counts."
+                "Validate data integrity across bronze, silver, and gold layers: missing values, duplicates, invalid records, and unexpected row counts."
               ]
             }
           },
@@ -1133,7 +1217,7 @@
               "lines": [
                 "## Data Freshness\n",
                 "\n",
-                "Check whether gold-layer data is up to date. Stale data indicates the pipeline has not refreshed recently."
+                "Check whether bronze, silver, and gold layer data is up to date. Stale data indicates the pipeline has not refreshed recently."
               ]
             }
           },
@@ -1287,6 +1371,402 @@
             "y": 12,
             "width": 6,
             "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "hdr_quarantine",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Quarantine Records\n",
+                "\n",
+                "Records rejected during validation at bronze and silver layers, flagged for review and reprocessing."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 31,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_quarantine_total",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "quarantine",
+                  "fields": [
+                    {
+                      "name": "measure(total_records)",
+                      "expression": "MEASURE(`total_records`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Quarantined Records"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(total_records)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 32,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl_quarantine_details",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "quarantine",
+                  "fields": [
+                    {
+                      "name": "source_layer",
+                      "expression": "`source_layer`"
+                    },
+                    {
+                      "name": "quarantine_reason",
+                      "expression": "`quarantine_reason`"
+                    },
+                    {
+                      "name": "source_file",
+                      "expression": "`source_file`"
+                    },
+                    {
+                      "name": "source_month",
+                      "expression": "`source_month`"
+                    },
+                    {
+                      "name": "batch_id",
+                      "expression": "`batch_id`"
+                    },
+                    {
+                      "name": "quarantined_at",
+                      "expression": "`quarantined_at`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Quarantine Record Details",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "source_layer"
+                  },
+                  {
+                    "fieldName": "quarantine_reason"
+                  },
+                  {
+                    "fieldName": "source_file"
+                  },
+                  {
+                    "fieldName": "source_month"
+                  },
+                  {
+                    "fieldName": "batch_id"
+                  },
+                  {
+                    "fieldName": "quarantined_at"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 37,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_quarantine_reasons",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "quarantine",
+                  "fields": [
+                    {
+                      "name": "source_layer",
+                      "expression": "`source_layer`"
+                    },
+                    {
+                      "name": "quarantine_reason",
+                      "expression": "`quarantine_reason`"
+                    },
+                    {
+                      "name": "measure(total_records)",
+                      "expression": "MEASURE(`total_records`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Quarantine Records by Reason",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "quarantine_reason",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(total_records)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "source_layer",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 32,
+            "width": 8,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_quarantine_layer",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "quarantine",
+                  "fields": [
+                    {
+                      "name": "source_layer",
+                      "expression": "`source_layer`"
+                    },
+                    {
+                      "name": "measure(total_records)",
+                      "expression": "MEASURE(`total_records`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Records by Layer"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "source_layer",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(total_records)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 34,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_freshness_layer",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "freshness",
+                  "fields": [
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "source_layer",
+                      "expression": "`source_layer`"
+                    },
+                    {
+                      "name": "measure(table_count)",
+                      "expression": "MEASURE(`table_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Freshness by Layer"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "source_layer",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(table_count)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "status",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 4,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_dq_layer",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "data_quality",
+                  "fields": [
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "source_layer",
+                      "expression": "`source_layer`"
+                    },
+                    {
+                      "name": "measure(total_checks)",
+                      "expression": "MEASURE(`total_checks`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "DQ Checks by Layer"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "source_layer",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(total_checks)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "status",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 25,
+            "width": 4,
+            "height": 6
           }
         }
       ],
