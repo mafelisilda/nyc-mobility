@@ -3,7 +3,7 @@
 ### Overview
 
 The Gold layer uses one trip fact table and four dimensions. It supports analysis of NYC Green Taxi trips by pickup or dropoff date, hour, zone, and weather at pickup.
-![NYC Star Schema](img/nyc-star-schema.jpeg)
+![NYC Star Schema](img/nyc_data_model.jpeg)
 ### Table grain
 
 | Table | One row represents | Primary key |
@@ -28,7 +28,7 @@ Each trip has separate dimension keys for its pickup and dropoff:
 | `dropoff_zone_key` | `dim_zone` | Dropoff zone |
 | `weather_key` | `dim_weather` | Weather associated with the pickup hour |
 
-The fact table also contains `trip_hash` and these measures: `passenger_count`, `trip_distance`, `trip_duration_minutes`, `fare_amount`, `tip_amount`, `total_amount`, `temperature_c`, `precipitation_mm`, and `trip_count`.
+The fact table contains these measures: `passenger_count`, `trip_distance`, `trip_duration_minutes`, `fare_amount`, `tip_amount`, `total_amount`, `temperature_c`, `precipitation_mm`, and `trip_count`.
 
 ### Dimensions
 
