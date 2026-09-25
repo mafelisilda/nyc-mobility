@@ -21,16 +21,33 @@ BRONZE_TAXI = "nyc_mobility.bronze.green_taxi"
 SILVER_TAXI = "nyc_mobility.silver.taxi_trips"
 SILVER_WEATHER = "nyc_mobility.silver.weather"
 SILVER_ZONES = "nyc_mobility.silver.taxi_zones"
+SILVER_QUARANTINE = (
+    "nyc_mobility.silver.taxi_trips_quarantine"
+)
 
 
 # COMMAND ----------
 # 3. LOAD TABLES
 
-bronze_taxi = spark.table(BRONZE_TAXI)
+bronze_taxi = spark.table(
+    BRONZE_TAXI
+)
 
-taxi = spark.table(SILVER_TAXI)
-weather = spark.table(SILVER_WEATHER)
-zones = spark.table(SILVER_ZONES)
+taxi = spark.table(
+    SILVER_TAXI
+)
+
+weather = spark.table(
+    SILVER_WEATHER
+)
+
+zones = spark.table(
+    SILVER_ZONES
+)
+
+quarantine = spark.table(
+    SILVER_QUARANTINE
+)
 
 
 # COMMAND ----------
@@ -54,7 +71,9 @@ print(
     f"{expected_months}"
 )
 
-assert len(expected_months) > 0
+assert len(expected_months) > 0, (
+    "No expected source months were found."
+)
 
 
 # COMMAND ----------
@@ -86,11 +105,9 @@ print(
     f"{taxi_nulls}"
 )
 
-taxi_duplicate_hashes = (
-    count_duplicates(
-        taxi,
-        ["trip_hash"],
-    )
+taxi_duplicate_hashes = count_duplicates(
+    taxi,
+    ["trip_hash"],
 )
 
 print(
@@ -132,7 +149,6 @@ print(
     "does not match source_month: "
     f"{taxi_month_mismatches}"
 )
-
 
 actual_taxi_months = sorted(
     {
@@ -180,11 +196,9 @@ print(
     f"{weather_nulls}"
 )
 
-weather_duplicate_hours = (
-    count_duplicates(
-        weather,
-        ["weather_datetime"],
-    )
+weather_duplicate_hours = count_duplicates(
+    weather,
+    ["weather_datetime"],
 )
 
 print(
@@ -205,12 +219,18 @@ weather_month_counts_df = (
             "yyyy-MM",
         ),
     )
-    .groupBy("weather_month")
+    .groupBy(
+        "weather_month"
+    )
     .count()
-    .orderBy("weather_month")
+    .orderBy(
+        "weather_month"
+    )
 )
 
-display(weather_month_counts_df)
+display(
+    weather_month_counts_df
+)
 
 actual_weather_counts = {
     row["weather_month"]: row["count"]
@@ -231,7 +251,10 @@ for source_month in expected_months:
     expected_weather_counts[
         source_month
     ] = (
-        monthrange(year, month)[1]
+        monthrange(
+            year,
+            month,
+        )[1]
         * 24
     )
 
@@ -245,8 +268,6 @@ print(
     f"{actual_weather_counts}"
 )
 
-
-# Compare only the months expected from taxi Bronze.
 actual_required_weather_counts = {
     source_month: actual_weather_counts.get(
         source_month
@@ -271,11 +292,9 @@ zone_nulls = count_nulls(
     ],
 )
 
-duplicate_location_ids = (
-    count_duplicates(
-        zones,
-        ["location_id"],
-    )
+duplicate_location_ids = count_duplicates(
+    zones,
+    ["location_id"],
 )
 
 print(
@@ -295,47 +314,265 @@ print(
 
 
 # COMMAND ----------
-# 10. ASSERT SILVER QUALITY RULES
+# 10. TAXI QUARANTINE VALIDATION
 
-assert taxi_row_count > 0
+print("=== TAXI QUARANTINE VALIDATION ===")
+
+quarantine_row_count = (
+    quarantine.count()
+)
+
+print(
+    f"Taxi quarantine row count: "
+    f"{quarantine_row_count:,}"
+)
+
+quarantine_nulls = count_nulls(
+    quarantine,
+    [
+        "quarantine_reason",
+        "quarantined_at",
+    ],
+)
+
+print(
+    f"Quarantine null counts: "
+    f"{quarantine_nulls}"
+)
+
+supported_quarantine_reasons = [
+    "NULL_OR_INVALID_PICKUP_TIMESTAMP",
+    "NULL_OR_INVALID_DROPOFF_TIMESTAMP",
+    "DROPOFF_BEFORE_PICKUP",
+    "NULL_PICKUP_LOCATION",
+    "NULL_DROPOFF_LOCATION",
+    "NULL_SOURCE_MONTH",
+    "PICKUP_MONTH_MISMATCH",
+]
+
+unsupported_quarantine_reasons = (
+    quarantine
+    .filter(
+        ~F.col(
+            "quarantine_reason"
+        ).isin(
+            supported_quarantine_reasons
+        )
+    )
+    .count()
+)
+
+print(
+    "Rows with unsupported quarantine reasons: "
+    f"{unsupported_quarantine_reasons}"
+)
+
+quarantine_summary = (
+    quarantine
+    .groupBy(
+        "quarantine_reason"
+    )
+    .count()
+    .orderBy(
+        "quarantine_reason"
+    )
+)
+
+print(
+    "Quarantine counts by reason:"
+)
+
+display(
+    quarantine_summary
+)
+
+
+# COMMAND ----------
+# 11. CHECK SILVER AND QUARANTINE OVERLAP
+
+silver_trip_hashes = (
+    taxi
+    .select(
+        "trip_hash"
+    )
+    .filter(
+        F.col("trip_hash").isNotNull()
+    )
+    .distinct()
+)
+
+quarantine_trip_hashes = (
+    quarantine
+    .select(
+        "trip_hash"
+    )
+    .filter(
+        F.col("trip_hash").isNotNull()
+    )
+    .distinct()
+)
+
+silver_quarantine_overlap = (
+    silver_trip_hashes
+    .join(
+        quarantine_trip_hashes,
+        on="trip_hash",
+        how="inner",
+    )
+    .count()
+)
+
+print(
+    "Trip hashes present in both "
+    "Silver and quarantine: "
+    f"{silver_quarantine_overlap}"
+)
+
+
+# COMMAND ----------
+# 12. QUARANTINE RATE
+
+bronze_taxi_row_count = (
+    bronze_taxi.count()
+)
+
+quarantine_rate = (
+    quarantine_row_count
+    / bronze_taxi_row_count
+    * 100
+    if bronze_taxi_row_count > 0
+    else 0
+)
+
+print(
+    f"Bronze Taxi rows: "
+    f"{bronze_taxi_row_count:,}"
+)
+
+print(
+    f"Silver Taxi rows: "
+    f"{taxi_row_count:,}"
+)
+
+print(
+    f"Quarantined Taxi rows: "
+    f"{quarantine_row_count:,}"
+)
+
+print(
+    f"Quarantine rate: "
+    f"{quarantine_rate:.4f}%"
+)
+
+
+# COMMAND ----------
+# 13. ASSERT SILVER QUALITY RULES
+
+# Taxi
+assert taxi_row_count > 0, (
+    "Silver Taxi contains no records."
+)
 
 assert all(
     value == 0
     for value in taxi_nulls.values()
+), (
+    "Silver Taxi contains null values "
+    "in required fields."
 )
 
-assert taxi_duplicate_hashes == 0
-assert negative_trip_durations == 0
-assert taxi_month_mismatches == 0
+assert taxi_duplicate_hashes == 0, (
+    "Silver Taxi contains duplicate "
+    "trip hashes."
+)
+
+assert negative_trip_durations == 0, (
+    "Silver Taxi contains negative "
+    "trip durations."
+)
+
+assert taxi_month_mismatches == 0, (
+    "Silver Taxi contains pickup dates "
+    "that do not match source_month."
+)
 
 assert (
     actual_taxi_months
     == expected_months
+), (
+    "Silver Taxi months do not match "
+    "the expected Bronze source months."
 )
 
+
+# Weather
 assert all(
     value == 0
     for value in weather_nulls.values()
+), (
+    "Silver Weather contains null values "
+    "in required fields."
 )
 
-assert weather_duplicate_hours == 0
+assert weather_duplicate_hours == 0, (
+    "Silver Weather contains duplicate "
+    "weather timestamps."
+)
 
 assert (
     actual_required_weather_counts
     == expected_weather_counts
 ), (
-    "Weather Silver does not contain "
+    "Silver Weather does not contain "
     "the expected hourly records for "
-    "all taxi source months."
+    "all Taxi source months."
 )
 
-assert zone_row_count == 265
+
+# Zones
+assert zone_row_count == 265, (
+    "Silver Taxi Zones does not contain "
+    "the expected 265 records."
+)
 
 assert all(
     value == 0
     for value in zone_nulls.values()
+), (
+    "Silver Taxi Zones contains null values "
+    "in required fields."
 )
 
-assert duplicate_location_ids == 0
+assert duplicate_location_ids == 0, (
+    "Silver Taxi Zones contains duplicate "
+    "location IDs."
+)
 
-print("All Silver validation checks passed.")
+
+# Quarantine
+assert all(
+    value == 0
+    for value in quarantine_nulls.values()
+), (
+    "Taxi quarantine contains null "
+    "quarantine metadata."
+)
+
+assert unsupported_quarantine_reasons == 0, (
+    "Taxi quarantine contains an "
+    "unsupported quarantine reason."
+)
+
+assert silver_quarantine_overlap == 0, (
+    "A Taxi trip is present in both "
+    "Silver and quarantine."
+)
+
+
+# COMMAND ----------
+# 14. FINAL RESULT
+
+print(
+    "All Silver and quarantine "
+    "validation checks passed."
+)
