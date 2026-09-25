@@ -152,6 +152,7 @@ Silver contains cleaned, standardized, and deduplicated records.
 Tables:
 
 - `nyc_mobility.silver.taxi_trips`
+- `nyc_mobility.silver.taxi_trips_quarantine`
 - `nyc_mobility.silver.weather`
 - `nyc_mobility.silver.taxi_zones`
 
@@ -163,9 +164,11 @@ Taxi transformations include:
 - location ID normalization
 - trip-duration calculation
 - deterministic `trip_hash` generation
-- invalid record filtering
+- row-level data-quality classification
+- valid-record routing to `nyc_mobility.silver.taxi_trips`
+- invalid-record routing to `nyc_mobility.silver.taxi_trips_quarantine`
 - source-month validation
-- duplicate removal
+- duplicate removal for valid trips
 
 ### Weather Transformations
 
@@ -291,7 +294,7 @@ The current unit-test suite covers:
 - Weather Silver transformations
 - Taxi Zone Silver transformations
 
-The current suite contains **21 tests**.
+The current suite contains **23 tests**.
 
 GitHub Actions runs:
 
