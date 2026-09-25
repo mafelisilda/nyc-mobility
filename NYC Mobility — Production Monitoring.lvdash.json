@@ -1,0 +1,1377 @@
+{
+  "datasets": [
+    {
+      "name": "data_quality",
+      "displayName": "Data Quality Checks",
+      "config": {
+        "version": "1.1",
+        "source": "nyc_mobility.gold.dq_check_results",
+        "dimensions": [
+          {
+            "name": "check_id",
+            "expr": "check_id"
+          },
+          {
+            "name": "check_type",
+            "expr": "check_type"
+          },
+          {
+            "name": "table_name",
+            "expr": "table_name"
+          },
+          {
+            "name": "check_name",
+            "expr": "check_name"
+          },
+          {
+            "name": "check_description",
+            "expr": "check_description"
+          },
+          {
+            "name": "status",
+            "expr": "status"
+          },
+          {
+            "name": "severity",
+            "expr": "severity"
+          },
+          {
+            "name": "checked_at",
+            "expr": "checked_at"
+          }
+        ],
+        "measures": [
+          {
+            "name": "total_checks",
+            "expr": "COUNT(1)"
+          },
+          {
+            "name": "passing_checks",
+            "expr": "COUNT(1) FILTER (WHERE status = 'PASS')"
+          },
+          {
+            "name": "warning_checks",
+            "expr": "COUNT(1) FILTER (WHERE status = 'WARN')"
+          },
+          {
+            "name": "failing_checks",
+            "expr": "COUNT(1) FILTER (WHERE status = 'FAIL')"
+          },
+          {
+            "name": "avg_pass_rate",
+            "expr": "AVG(pass_rate)",
+            "format": {
+              "type": "percentage",
+              "decimalPlaces": {
+                "type": "exact",
+                "places": 1.0
+              }
+            }
+          },
+          {
+            "name": "total_failed_count",
+            "expr": "SUM(failed_count)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "job_execution",
+      "displayName": "Job Execution",
+      "config": {
+        "version": "1.1",
+        "source": "nyc_mobility.gold.job_run_history",
+        "dimensions": [
+          {
+            "name": "run_id",
+            "expr": "run_id"
+          },
+          {
+            "name": "run_name",
+            "expr": "run_name"
+          },
+          {
+            "name": "state",
+            "expr": "state",
+            "displayName": "Life Cycle State"
+          },
+          {
+            "name": "result_state",
+            "expr": "result_state",
+            "displayName": "Result State"
+          },
+          {
+            "name": "start_time",
+            "expr": "start_time"
+          },
+          {
+            "name": "end_time",
+            "expr": "end_time"
+          },
+          {
+            "name": "trigger",
+            "expr": "trigger"
+          },
+          {
+            "name": "creator",
+            "expr": "creator"
+          },
+          {
+            "name": "run_page_url",
+            "expr": "run_page_url"
+          },
+          {
+            "name": "number_in_job",
+            "expr": "number_in_job"
+          }
+        ],
+        "measures": [
+          {
+            "name": "run_count",
+            "expr": "COUNT(1)"
+          },
+          {
+            "name": "successful_runs",
+            "expr": "COUNT(1) FILTER (WHERE result_state = 'SUCCESS')"
+          },
+          {
+            "name": "failed_runs",
+            "expr": "COUNT(1) FILTER (WHERE result_state = 'FAILED')"
+          },
+          {
+            "name": "failure_rate",
+            "expr": "COUNT(1) FILTER (WHERE result_state = 'FAILED') * 1.0 / COUNT(1)",
+            "format": {
+              "type": "percentage",
+              "decimalPlaces": {
+                "type": "exact",
+                "places": 1.0
+              }
+            }
+          },
+          {
+            "name": "avg_duration_ms",
+            "expr": "AVG(duration_ms)"
+          },
+          {
+            "name": "latest_run_time",
+            "expr": "MAX(start_time)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "task_failures",
+      "displayName": "Task Failures",
+      "config": {
+        "source": "nyc_mobility.gold.task_run_history",
+        "measures": [
+          {
+            "name": "failure_count",
+            "expr": "COUNT(1)"
+          }
+        ],
+        "filter": "result_state = 'FAILED'",
+        "version": "1.1",
+        "dimensions": [
+          {
+            "name": "run_id",
+            "expr": "run_id"
+          },
+          {
+            "name": "task_key",
+            "expr": "task_key"
+          },
+          {
+            "name": "result_state",
+            "expr": "result_state"
+          },
+          {
+            "name": "start_time",
+            "expr": "start_time"
+          },
+          {
+            "name": "end_time",
+            "expr": "end_time"
+          }
+        ]
+      }
+    },
+    {
+      "name": "task_execution",
+      "displayName": "Task Execution",
+      "config": {
+        "version": "1.1",
+        "source": "nyc_mobility.gold.task_run_history",
+        "dimensions": [
+          {
+            "name": "run_id",
+            "expr": "run_id"
+          },
+          {
+            "name": "task_key",
+            "expr": "task_key"
+          },
+          {
+            "name": "state",
+            "expr": "state",
+            "displayName": "Life Cycle State"
+          },
+          {
+            "name": "result_state",
+            "expr": "result_state",
+            "displayName": "Result State"
+          },
+          {
+            "name": "start_time",
+            "expr": "start_time"
+          },
+          {
+            "name": "end_time",
+            "expr": "end_time"
+          }
+        ],
+        "measures": [
+          {
+            "name": "task_count",
+            "expr": "COUNT(1)"
+          },
+          {
+            "name": "failed_task_count",
+            "expr": "COUNT(1) FILTER (WHERE result_state = 'FAILED')"
+          },
+          {
+            "name": "avg_duration_ms",
+            "expr": "AVG(duration_ms)"
+          },
+          {
+            "name": "total_duration_ms",
+            "expr": "SUM(duration_ms)"
+          },
+          {
+            "name": "task_failure_rate",
+            "expr": "COUNT(1) FILTER (WHERE result_state = 'FAILED') * 1.0 / COUNT(1)",
+            "format": {
+              "type": "percentage",
+              "decimalPlaces": {
+                "type": "exact",
+                "places": 1.0
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "freshness",
+      "displayName": "Data Freshness",
+      "config": {
+        "version": "1.1",
+        "source": "WITH fact_latest AS (\n  SELECT MAX(d.full_date) AS latest_date\n  FROM nyc_mobility.gold.fact_trip ft\n  JOIN nyc_mobility.gold.dim_date d ON ft.pickup_date_key = d.date_key\n) SELECT 'dim_date' AS table_name, 'full_date' AS freshness_column,\n       CAST(MAX(full_date) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), MAX(full_date)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), MAX(full_date)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_date GROUP BY 1, 2 UNION ALL SELECT 'fact_trip' AS table_name, 'pickup_date' AS freshness_column,\n       CAST((SELECT latest_date FROM fact_latest) AS STRING) AS latest_data,\n       DATEDIFF(CURRENT_DATE(), (SELECT latest_date FROM fact_latest)) AS days_stale,\n       CASE WHEN DATEDIFF(CURRENT_DATE(), (SELECT latest_date FROM fact_latest)) <= 1 THEN 'FRESH' ELSE 'STALE' END AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.fact_trip GROUP BY 1, 2 UNION ALL SELECT 'dim_hour' AS table_name, 'N/A' AS freshness_column,\n       'N/A' AS latest_data, NULL AS days_stale, 'UNKNOWN' AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_hour GROUP BY 1, 2, 3, 4, 5 UNION ALL SELECT 'dim_weather' AS table_name, 'N/A' AS freshness_column,\n       'N/A' AS latest_data, NULL AS days_stale, 'UNKNOWN' AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_weather GROUP BY 1, 2, 3, 4, 5 UNION ALL SELECT 'dim_zone' AS table_name, 'N/A' AS freshness_column,\n       'N/A' AS latest_data, NULL AS days_stale, 'UNKNOWN' AS status,\n       CAST(COUNT(*) AS INT) AS row_count\nFROM nyc_mobility.gold.dim_zone GROUP BY 1, 2, 3, 4, 5\n",
+        "dimensions": [
+          {
+            "name": "table_name",
+            "expr": "table_name",
+            "displayName": "Table Name"
+          },
+          {
+            "name": "freshness_column",
+            "expr": "freshness_column",
+            "displayName": "Freshness Column"
+          },
+          {
+            "name": "latest_data",
+            "expr": "latest_data",
+            "displayName": "Latest Data"
+          },
+          {
+            "name": "days_stale",
+            "expr": "days_stale",
+            "displayName": "Days Stale"
+          },
+          {
+            "name": "status",
+            "expr": "status",
+            "displayName": "Status"
+          },
+          {
+            "name": "row_count",
+            "expr": "row_count",
+            "displayName": "Row Count"
+          }
+        ]
+      }
+    }
+  ],
+  "pages": [
+    {
+      "name": "5e04d227",
+      "displayName": "Production Monitoring",
+      "layout": [
+        {
+          "widget": {
+            "name": "cntr_failing",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "data_quality",
+                  "fields": [
+                    {
+                      "name": "measure(failing_checks)",
+                      "expression": "MEASURE(`failing_checks`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Failing Checks"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(failing_checks)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 23,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl_freshness",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "freshness",
+                  "fields": [
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "freshness_column",
+                      "expression": "`freshness_column`"
+                    },
+                    {
+                      "name": "latest_data",
+                      "expression": "`latest_data`"
+                    },
+                    {
+                      "name": "days_stale",
+                      "expression": "`days_stale`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "row_count",
+                      "expression": "`row_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Data Freshness Status"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "table_name"
+                  },
+                  {
+                    "fieldName": "freshness_column"
+                  },
+                  {
+                    "fieldName": "latest_data"
+                  },
+                  {
+                    "fieldName": "days_stale"
+                  },
+                  {
+                    "fieldName": "status"
+                  },
+                  {
+                    "fieldName": "row_count"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_fail_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "job_execution",
+                  "fields": [
+                    {
+                      "name": "measure(failure_rate)",
+                      "expression": "MEASURE(`failure_rate`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Failure Rate"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(failure_rate)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_task_fail_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "task_execution",
+                  "fields": [
+                    {
+                      "name": "measure(task_failure_rate)",
+                      "expression": "MEASURE(`task_failure_rate`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Task Failure Rate"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(task_failure_rate)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 10,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# NYC Mobility — Production Monitoring\n",
+                "\n",
+                "**Pipeline**: `nyc_mobility` · Job ID: `19110422057552` · Bronze → Silver → Gold · Owner: `cristina.villota@ftwfoundation.org`"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl_dq_results",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "data_quality",
+                  "fields": [
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "check_name",
+                      "expression": "`check_name`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "severity",
+                      "expression": "`severity`"
+                    },
+                    {
+                      "name": "check_description",
+                      "expression": "`check_description`"
+                    },
+                    {
+                      "name": "checked_at",
+                      "expression": "`checked_at`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Data Quality Check Results"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "table_name"
+                  },
+                  {
+                    "fieldName": "check_name"
+                  },
+                  {
+                    "fieldName": "status"
+                  },
+                  {
+                    "fieldName": "severity"
+                  },
+                  {
+                    "fieldName": "check_description"
+                  },
+                  {
+                    "fieldName": "checked_at"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 25,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "hdr_quality",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Data Quality\n",
+                "\n",
+                "Validate data integrity: missing values, duplicates, invalid records, and unexpected row counts."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 22,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl_job_runs",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "job_execution",
+                  "fields": [
+                    {
+                      "name": "run_name",
+                      "expression": "`run_name`"
+                    },
+                    {
+                      "name": "state",
+                      "expression": "`state`"
+                    },
+                    {
+                      "name": "result_state",
+                      "expression": "`result_state`"
+                    },
+                    {
+                      "name": "start_time",
+                      "expression": "`start_time`"
+                    },
+                    {
+                      "name": "end_time",
+                      "expression": "`end_time`"
+                    },
+                    {
+                      "name": "trigger",
+                      "expression": "`trigger`"
+                    },
+                    {
+                      "name": "creator",
+                      "expression": "`creator`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Job Run History"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "run_name"
+                  },
+                  {
+                    "fieldName": "state"
+                  },
+                  {
+                    "fieldName": "result_state"
+                  },
+                  {
+                    "fieldName": "start_time"
+                  },
+                  {
+                    "fieldName": "end_time"
+                  },
+                  {
+                    "fieldName": "trigger"
+                  },
+                  {
+                    "fieldName": "creator"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 8,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_total_tasks",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "task_execution",
+                  "fields": [
+                    {
+                      "name": "measure(task_count)",
+                      "expression": "MEASURE(`task_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Task Steps"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(task_count)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 10,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "hdr_execution",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Execution Monitoring\n",
+                "\n",
+                "Monitor whether the pipeline is running, when it ran, and how long each step took."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_total_checks",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "data_quality",
+                  "fields": [
+                    {
+                      "name": "measure(total_checks)",
+                      "expression": "MEASURE(`total_checks`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total DQ Checks"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(total_checks)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl_failed_tasks",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "task_failures",
+                  "fields": [
+                    {
+                      "name": "task_key",
+                      "expression": "`task_key`"
+                    },
+                    {
+                      "name": "run_id",
+                      "expression": "`run_id`"
+                    },
+                    {
+                      "name": "result_state",
+                      "expression": "`result_state`"
+                    },
+                    {
+                      "name": "start_time",
+                      "expression": "`start_time`"
+                    },
+                    {
+                      "name": "end_time",
+                      "expression": "`end_time`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Failed Task Steps — Detail"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "task_key"
+                  },
+                  {
+                    "fieldName": "run_id"
+                  },
+                  {
+                    "fieldName": "result_state"
+                  },
+                  {
+                    "fieldName": "start_time"
+                  },
+                  {
+                    "fieldName": "end_time"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_total_runs",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "job_execution",
+                  "fields": [
+                    {
+                      "name": "measure(run_count)",
+                      "expression": "MEASURE(`run_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Job Runs"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(run_count)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_passing",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "data_quality",
+                  "fields": [
+                    {
+                      "name": "measure(passing_checks)",
+                      "expression": "MEASURE(`passing_checks`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Passing Checks"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(passing_checks)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 23,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "hdr_failures",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Failures Monitoring\n",
+                "\n",
+                "Track which jobs and steps failed, when they failed, and how often failures occur."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_success",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "job_execution",
+                  "fields": [
+                    {
+                      "name": "measure(successful_runs)",
+                      "expression": "MEASURE(`successful_runs`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Successful Runs"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(successful_runs)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_warnings",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "data_quality",
+                  "fields": [
+                    {
+                      "name": "measure(warning_checks)",
+                      "expression": "MEASURE(`warning_checks`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Warning Checks"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(warning_checks)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 23,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_failed_tasks",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "task_execution",
+                  "fields": [
+                    {
+                      "name": "measure(failed_task_count)",
+                      "expression": "MEASURE(`failed_task_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Failed Task Steps"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(failed_task_count)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "hdr_freshness",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Data Freshness\n",
+                "\n",
+                "Check whether gold-layer data is up to date. Stale data indicates the pipeline has not refreshed recently."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "cntr_failed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "job_execution",
+                  "fields": [
+                    {
+                      "name": "measure(failed_runs)",
+                      "expression": "MEASURE(`failed_runs`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Failed Job Runs"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(failed_runs)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl_task_runs_summary",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "task_execution",
+                  "fields": [
+                    {
+                      "name": "task_key",
+                      "expression": "`task_key`"
+                    },
+                    {
+                      "name": "measure(task_count)",
+                      "expression": "MEASURE(`task_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Task Runs by Step"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "task_key"
+                  },
+                  {
+                    "fieldName": "measure(task_count)"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 4,
+            "width": 4,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl_failures_summary",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "task_failures",
+                  "fields": [
+                    {
+                      "name": "task_key",
+                      "expression": "`task_key`"
+                    },
+                    {
+                      "name": "measure(failure_count)",
+                      "expression": "MEASURE(`failure_count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Failures by Step"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "task_key"
+                  },
+                  {
+                    "fieldName": "measure(failure_count)"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 12,
+            "width": 6,
+            "height": 5
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "visualizationColors": [
+        "#0066FF",
+        "#00C16A",
+        "#FF3621",
+        "#FFB300",
+        "#9B51E0",
+        "#00B8D9",
+        "#95A5A6",
+        "#2ECC71",
+        "#3498DB",
+        "#FF6B6B",
+        "#4ECDC4",
+        "#E74C3C"
+      ],
+      "widgetHeaderAlignment": "LEFT",
+      "widgetCornerRadius": 8,
+      "widgetShadow": 10,
+      "visualizationColorMappings": [
+        {
+          "value": "SUCCESS",
+          "color": "#00C16A"
+        },
+        {
+          "value": "FAILED",
+          "color": "#FF3621"
+        },
+        {
+          "value": "RUNNING",
+          "color": "#0066FF"
+        },
+        {
+          "value": "TERMINATED",
+          "color": "#95A5A6"
+        },
+        {
+          "value": "INTERNAL_ERROR",
+          "color": "#FF3621"
+        },
+        {
+          "value": "PASS",
+          "color": "#00C16A"
+        },
+        {
+          "value": "WARN",
+          "color": "#FFB300"
+        },
+        {
+          "value": "FAIL",
+          "color": "#FF3621"
+        },
+        {
+          "value": "FRESH",
+          "color": "#00C16A"
+        },
+        {
+          "value": "STALE",
+          "color": "#FF3621"
+        },
+        {
+          "value": "UNKNOWN",
+          "color": "#95A5A6"
+        },
+        {
+          "value": "critical",
+          "color": "#FF3621"
+        },
+        {
+          "value": "medium",
+          "color": "#FFB300"
+        },
+        {
+          "value": "low",
+          "color": "#0066FF"
+        }
+      ]
+    },
+    "applyModeEnabled": false
+  }
+}
