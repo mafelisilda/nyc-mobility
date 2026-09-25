@@ -219,11 +219,11 @@ Stores trip-level facts and foreign keys used to analyze mobility, location, tim
 | `pickup_zone_key` | BIGINT | FK | References `dim_zone.zone_key` for the pickup zone |
 | `dropoff_zone_key` | BIGINT | FK | References `dim_zone.zone_key` for the dropoff zone |
 | `weather_key` | BIGINT | FK | References `dim_weather.weather_key` based on weather at the pickup hour |
-| `passenger_count` | Numeric | Measure | Number of passengers |
-| `trip_distance` | Numeric | Measure | Trip distance |
+| `passenger_count` | BIGINT | Measure | Number of passengers |
+| `trip_distance` | DOUBLE | Measure | Trip distance |
 | `trip_duration_minutes` | DOUBLE | Measure | Duration of the trip in minutes |
-| `fare_amount` | Numeric | Measure | Base fare charged |
-| `total_amount` | Numeric | Measure | Total amount charged to the passenger |
+| `fare_amount` | DOUBLE | Measure | Base fare charged |
+| `total_amount` | DOUBLE | Measure | Total amount charged to the passenger |
 | `temperature_c` | DOUBLE | Measure | Exact temperature at the pickup hour |
 | `precipitation_mm` | DOUBLE | Measure | Exact precipitation amount at the pickup hour |
 | `trip_count` | INT | Measure | Constant value of `1`, used for aggregation |
