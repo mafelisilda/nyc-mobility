@@ -48,21 +48,19 @@ This hash is used for deduplication and technical trip identity.
 
 It is a deterministic engineering key rather than a source-provided business identifier.
 
-## 5. Invalid Trip Filtering
+## 5. Taxi Quarantine Strategy
 
-Trips are excluded from Silver when:
+The pipeline applies different data-quality actions depending on the type and severity of the issue.
 
-- pickup timestamp is null
-- dropoff timestamp is null
-- dropoff occurs before pickup
-- pickup location is null
-- dropoff location is null
-- pickup month does not match the source month
+- Row-level Taxi defects → quarantine
+- Valid Taxi records → Silver
+- Duplicate Taxi records → deduplicate
+- Weather integrity or completeness failures → fail validation
+- Taxi Zone integrity or completeness failures → fail validation
 
-During March processing:
+Taxi records are quarantined when an individual row is invalid but the rest of the batch can still be processed safely.
 
-- 1 row was excluded because dropoff occurred before pickup
-- 9 rows were excluded because pickup timestamps did not belong to March 2026
+Weather and Taxi Zone issues are treated as validation failures because incomplete or structurally invalid supporting datasets can compromise downstream enrichment and dimensional integrity.
 
 ## 6. Weather Integration
 

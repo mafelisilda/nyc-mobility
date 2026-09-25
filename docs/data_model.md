@@ -1,135 +1,53 @@
-# Gold Data Model
+# NYC Mobility Gold Star Schema
 
-## Business Process
+### Overview
 
-The Gold model represents NYC Green Taxi mobility activity enriched with taxi-zone and weather information.
+The Gold layer uses one trip fact table and four dimensions. It supports analysis of NYC Green Taxi trips by pickup or dropoff date, hour, zone, and weather at pickup.
+![NYC Star Schema](img/nyc_data_model.jpeg)
+### Table grain
 
-## Fact Grain
+| Table | One row represents | Primary key |
+| --- | --- | --- |
+| `fact_trip` | One valid NYC Green Taxi trip | `trip_key` |
+| `dim_date` | One calendar date found in valid pickup or dropoff data | `date_key` |
+| `dim_hour` | One hour of the day; 24 rows total | `hour_key` |
+| `dim_zone` | One NYC TLC taxi zone | `zone_key` |
+| `dim_weather` | One distinct combination of descriptive weather attributes | `weather_key` |
 
-`fact_trip` has one row per valid NYC Green Taxi trip.
+### Fact table: `fact_trip`
 
-## Fact Table
+Each trip has separate dimension keys for its pickup and dropoff:
 
-### fact_trip
+| Foreign key | Dimension | Role |
+| --- | --- | --- |
+| `pickup_date_key` | `dim_date` | Pickup date |
+| `dropoff_date_key` | `dim_date` | Dropoff date |
+| `pickup_hour_key` | `dim_hour` | Pickup hour |
+| `dropoff_hour_key` | `dim_hour` | Dropoff hour |
+| `pickup_zone_key` | `dim_zone` | Pickup zone |
+| `dropoff_zone_key` | `dim_zone` | Dropoff zone |
+| `weather_key` | `dim_weather` | Weather associated with the pickup hour |
 
-Primary key:
+The fact table contains these measures: `passenger_count`, `trip_distance`, `trip_duration_minutes`, `fare_amount`, `total_amount`, `temperature_c`, `precipitation_mm`, and `trip_count`.
 
-- `trip_key`
+### Dimensions
 
-Technical identifier:
+- **`dim_date`:** Full date, year, quarter, month, month name, day of month, day of week, day name, week of year, and weekend flag.
+- **`dim_hour`:** Hour of day, hour label, and day period.
+- **`dim_zone`:** TLC `location_id`, borough, zone, and service zone.
+- **`dim_weather`:** Weather condition, temperature band, precipitation band, and rain flag.
 
-- `trip_hash`
+### How to query the model
 
-Foreign keys:
+- Count trips with `COUNT(*)` or `SUM(trip_count)`.
+- Use the **pickup** or **dropoff** key that matches the question. For example, use `pickup_zone_key` to group trips by pickup zone.
+- Use `dim_weather` for weather categories. Use `fact_trip.temperature_c` and `fact_trip.precipitation_mm` for numeric weather analysis.
+- When joining the same dimension for pickup and dropoff, use separate aliases such as `pickup_zone` and `dropoff_zone`.
 
-- `pickup_date_key`
-- `dropoff_date_key`
-- `pickup_hour_key`
-- `dropoff_hour_key`
-- `pickup_zone_key`
-- `dropoff_zone_key`
-- `weather_key`
+### Weather Matching
 
-Measures:
+Taxi trips are matched to hourly weather using the pickup time.
 
-- `passenger_count`
-- `trip_distance`
-- `trip_duration_minutes`
-- `fare_amount`
-- `total_amount`
-- `temperature_c`
-- `precipitation_mm`
-- `trip_count`
+The pickup timestamp is truncated to the hour and joined to the corresponding Silver weather observation. The resulting `weather_key` links the trip to `dim_weather`, while exact `temperature_c` and `precipitation_mm` values are retained in `fact_trip`.
 
-## Dimensions
-
-### dim_date
-
-Conformed date dimension used by both pickup and dropoff dates.
-
-Primary key:
-
-- `date_key`
-
-Attributes:
-
-- `full_date`
-- `year`
-- `quarter`
-- `month`
-- `month_name`
-- `day_of_month`
-- `day_of_week`
-- `day_name`
-- `week_of_year`
-- `is_weekend`
-
-### dim_hour
-
-Conformed hour dimension with 24 rows.
-
-Primary key:
-
-- `hour_key`
-
-Attributes:
-
-- `hour_of_day`
-- `hour_label`
-- `day_period`
-
-### dim_zone
-
-Taxi-zone dimension.
-
-Primary key:
-
-- `zone_key`
-
-Business key:
-
-- `location_id`
-
-Attributes:
-
-- `borough`
-- `zone`
-- `service_zone`
-
-### dim_weather
-
-Descriptive weather dimension.
-
-Primary key:
-
-- `weather_key`
-
-Attributes:
-
-- `weather_condition`
-- `temperature_band`
-- `precipitation_band`
-- `is_raining`
-
-Exact temperature and precipitation measurements remain in `fact_trip`.
-
-## Role-Playing Dimensions
-
-The model reuses the same physical dimensions for multiple business roles.
-
-`dim_date`:
-
-- pickup date
-- dropoff date
-
-`dim_hour`:
-
-- pickup hour
-- dropoff hour
-
-`dim_zone`:
-
-- pickup zone
-- dropoff zone
-
-Separate pickup and dropoff dimension tables are not required.
+Gold validation requires `weather_key` to be non-null and verifies referential integrity against `dim_weather`.
