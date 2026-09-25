@@ -44,6 +44,6 @@ The fact table also contains `trip_hash` and these measures: `passenger_count`, 
 - Use `dim_weather` for weather categories. Use `fact_trip.temperature_c` and `fact_trip.precipitation_mm` for numeric weather analysis.
 - When joining the same dimension for pickup and dropoff, use separate aliases such as `pickup_zone` and `dropoff_zone`.
 
-### Implementation checks
+### Implementation check
 
 Confirm in the Gold loading code how hourly weather is matched to each trip's pickup and how unmatched weather is handled. The diagram identifies the relationship but does not define that loading rule.
