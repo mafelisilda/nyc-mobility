@@ -28,7 +28,7 @@ Each trip has separate dimension keys for its pickup and dropoff:
 | `dropoff_zone_key` | `dim_zone` | Dropoff zone |
 | `weather_key` | `dim_weather` | Weather associated with the pickup hour |
 
-The fact table contains these measures: `passenger_count`, `trip_distance`, `trip_duration_minutes`, `fare_amount`, `tip_amount`, `total_amount`, `temperature_c`, `precipitation_mm`, and `trip_count`.
+The fact table contains these measures: `passenger_count`, `trip_distance`, `trip_duration_minutes`, `fare_amount`, `total_amount`, `temperature_c`, `precipitation_mm`, and `trip_count`.
 
 ### Dimensions
 
@@ -44,6 +44,10 @@ The fact table contains these measures: `passenger_count`, `trip_distance`, `tri
 - Use `dim_weather` for weather categories. Use `fact_trip.temperature_c` and `fact_trip.precipitation_mm` for numeric weather analysis.
 - When joining the same dimension for pickup and dropoff, use separate aliases such as `pickup_zone` and `dropoff_zone`.
 
-### Implementation check
+### Weather Matching
 
-Confirm in the Gold loading code how hourly weather is matched to each trip's pickup and how unmatched weather is handled. The diagram identifies the relationship but does not define that loading rule.
+Taxi trips are matched to hourly weather using the pickup time.
+
+The pickup timestamp is truncated to the hour and joined to the corresponding Silver weather observation. The resulting `weather_key` links the trip to `dim_weather`, while exact `temperature_c` and `precipitation_mm` values are retained in `fact_trip`.
+
+Gold validation requires `weather_key` to be non-null and verifies referential integrity against `dim_weather`.
