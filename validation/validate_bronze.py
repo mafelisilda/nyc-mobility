@@ -52,7 +52,7 @@ assert len(taxi_months) > 0, (
 
 
 # COMMAND ----------
-# 5. VALIDATE TAXI FILE UNIQUENESS
+# 5. VALIDATE TAXI FILE / BATCH STRUCTURE
 
 print("=== TAXI BRONZE VALIDATION ===")
 
@@ -70,7 +70,7 @@ taxi_batch_counts = (
 display(taxi_batch_counts)
 
 
-# One source file should map to one batch ID.
+# One source file should map to exactly one batch ID.
 duplicate_taxi_files = (
     taxi
     .select(
@@ -90,7 +90,7 @@ print(
 )
 
 
-# One source month should map to one source file.
+# One source month should map to exactly one source file.
 taxi_files_per_month = (
     taxi
     .select(
@@ -115,9 +115,33 @@ print(
 
 
 # COMMAND ----------
-# 6. BUILD EXPECTED WEATHER COUNTS DYNAMICALLY
+# 6. VALIDATE TAXI PROVENANCE METADATA
 
-expected_weather_batches = {}
+taxi_metadata_nulls = {
+    column: (
+        taxi
+        .filter(F.col(column).isNull())
+        .count()
+    )
+    for column in [
+        "source_system",
+        "source_file",
+        "source_month",
+        "batch_id",
+        "ingested_at",
+    ]
+}
+
+print(
+    f"Taxi metadata null counts: "
+    f"{taxi_metadata_nulls}"
+)
+
+
+# COMMAND ----------
+# 7. BUILD EXPECTED WEATHER COUNTS
+
+expected_weather_counts = {}
 
 for source_month in taxi_months:
 
@@ -126,62 +150,94 @@ for source_month in taxi_months:
         source_month.split("-"),
     )
 
-    expected_hours = (
-        monthrange(year, month)[1] * 24
+    expected_weather_counts[
+        source_month
+    ] = (
+        monthrange(year, month)[1]
+        * 24
     )
-
-    batch_id = (
-        f"weather_"
-        f"{source_month.replace('-', '_')}"
-    )
-
-    expected_weather_batches[
-        batch_id
-    ] = expected_hours
 
 print(
-    "Expected weather batches: "
-    f"{expected_weather_batches}"
+    f"Expected weather counts: "
+    f"{expected_weather_counts}"
 )
 
 
 # COMMAND ----------
-# 7. VALIDATE WEATHER BATCHES
+# 8. DISCOVER WEATHER MONTHS
 
 print("=== WEATHER BRONZE VALIDATION ===")
 
-actual_weather_batches = {
-    row["batch_id"]: row["count"]
-    for row in (
-        weather
-        .groupBy("batch_id")
-        .count()
-        .collect()
+weather_month_counts = (
+    weather
+    .withColumn(
+        "weather_month",
+        F.concat_ws(
+            "-",
+            F.regexp_extract(
+                "batch_id",
+                r"weather_(\d{4})_(\d{2})",
+                1,
+            ),
+            F.regexp_extract(
+                "batch_id",
+                r"weather_(\d{4})_(\d{2})",
+                2,
+            ),
+        ),
     )
-}
-
-print(
-    "Actual weather batches: "
-    f"{actual_weather_batches}"
+    .groupBy("weather_month")
+    .count()
+    .orderBy("weather_month")
 )
 
+display(weather_month_counts)
 
-# Only compare weather batches that correspond to taxi months.
-actual_required_weather_batches = {
-    batch_id: actual_weather_batches.get(
-        batch_id
-    )
-    for batch_id in expected_weather_batches
+actual_weather_counts = {
+    row["weather_month"]: row["count"]
+    for row in weather_month_counts.collect()
 }
 
+weather_months = sorted(
+    actual_weather_counts.keys()
+)
+
 print(
-    "Required weather batch counts: "
-    f"{actual_required_weather_batches}"
+    f"Weather months found: "
+    f"{weather_months}"
+)
+
+print(
+    f"Actual weather counts: "
+    f"{actual_weather_counts}"
 )
 
 
 # COMMAND ----------
-# 8. VALIDATE TAXI ZONES
+# 9. VALIDATE WEATHER PROVENANCE METADATA
+
+weather_metadata_nulls = {
+    column: (
+        weather
+        .filter(F.col(column).isNull())
+        .count()
+    )
+    for column in [
+        "source_system",
+        "source_url",
+        "batch_id",
+        "ingested_at",
+    ]
+}
+
+print(
+    f"Weather metadata null counts: "
+    f"{weather_metadata_nulls}"
+)
+
+
+# COMMAND ----------
+# 10. VALIDATE TAXI ZONES
 
 print("=== TAXI ZONE BRONZE VALIDATION ===")
 
@@ -205,35 +261,81 @@ null_zone_ids = (
     .count()
 )
 
+zone_metadata_nulls = {
+    column: (
+        zones
+        .filter(F.col(column).isNull())
+        .count()
+    )
+    for column in [
+        "source_system",
+        "source_url",
+        "batch_id",
+        "ingested_at",
+    ]
+}
+
 print(f"Zone row count: {zone_count:,}")
+print(f"Duplicate LocationIDs: {duplicate_zone_ids}")
+print(f"Null LocationIDs: {null_zone_ids}")
 print(
-    f"Duplicate LocationIDs: "
-    f"{duplicate_zone_ids}"
-)
-print(
-    f"Null LocationIDs: "
-    f"{null_zone_ids}"
+    f"Zone metadata null counts: "
+    f"{zone_metadata_nulls}"
 )
 
 
 # COMMAND ----------
-# 9. ASSERT BRONZE QUALITY RULES
+# 11. ASSERT BRONZE QUALITY RULES
 
+# Taxi
 assert taxi.count() > 0
-
 assert duplicate_taxi_files == 0
 assert months_with_multiple_files == 0
 
-assert (
-    actual_required_weather_batches
-    == expected_weather_batches
+assert all(
+    value == 0
+    for value in taxi_metadata_nulls.values()
 ), (
-    "Weather batches are missing or have "
-    "unexpected hourly counts."
+    "Taxi Bronze contains null provenance metadata."
 )
 
+
+# Taxi and Weather must cover the exact same months.
+assert weather_months == taxi_months, (
+    "Taxi and Weather Bronze months do not match exactly. "
+    f"Taxi months: {taxi_months}. "
+    f"Weather months: {weather_months}."
+)
+
+
+# Each weather month must contain the expected number of hourly rows.
+assert (
+    actual_weather_counts
+    == expected_weather_counts
+), (
+    "Weather Bronze contains missing, extra, "
+    "or incomplete monthly batches."
+)
+
+assert all(
+    value == 0
+    for value in weather_metadata_nulls.values()
+), (
+    "Weather Bronze contains null provenance metadata."
+)
+
+
+# Zones
 assert zone_count == 265
 assert duplicate_zone_ids == 0
 assert null_zone_ids == 0
+
+assert all(
+    value == 0
+    for value in zone_metadata_nulls.values()
+), (
+    "Taxi Zone Bronze contains null provenance metadata."
+)
+
 
 print("All Bronze validation checks passed.")
