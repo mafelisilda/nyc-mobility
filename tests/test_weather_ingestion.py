@@ -1,25 +1,9 @@
 import pytest
-from pyspark.sql import SparkSession
 
 from src.ingestion.weather import (
     add_weather_bronze_metadata,
     build_weather_url,
 )
-
-
-@pytest.fixture(scope="session")
-def spark():
-    spark_session = (
-        SparkSession.builder
-        .master("local[1]")
-        .appName("nyc-mobility-tests")
-        .getOrCreate()
-    )
-
-    yield spark_session
-
-    spark_session.stop()
-
 
 def test_build_weather_url():
     url = build_weather_url(

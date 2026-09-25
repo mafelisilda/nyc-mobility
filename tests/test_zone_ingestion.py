@@ -1,22 +1,6 @@
 import pytest
-from pyspark.sql import SparkSession
 
 from src.ingestion.zones import add_zone_bronze_metadata
-
-
-@pytest.fixture(scope="session")
-def spark():
-    spark_session = (
-        SparkSession.builder
-        .master("local[1]")
-        .appName("nyc-mobility-tests")
-        .getOrCreate()
-    )
-
-    yield spark_session
-
-    spark_session.stop()
-
 
 def test_add_zone_bronze_metadata(spark):
     input_df = spark.createDataFrame(

@@ -1,27 +1,7 @@
 
 import pytest
-from pyspark.sql import SparkSession
 
 from src.ingestion.taxi import add_bronze_metadata
-
-
-@pytest.fixture(scope="session")
-def spark():
-    """
-    Create one local Spark session for the test suite.
-    """
-
-    spark_session = (
-        SparkSession.builder
-        .master("local[1]")
-        .appName("nyc-mobility-tests")
-        .getOrCreate()
-    )
-
-    yield spark_session
-
-    spark_session.stop()
-
 
 def test_add_bronze_metadata(spark):
     """
