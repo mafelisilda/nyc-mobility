@@ -1,5 +1,3 @@
-import pytest
-
 from src.ingestion.zones import add_zone_bronze_metadata
 
 def test_add_zone_bronze_metadata(spark):

@@ -1,5 +1,3 @@
-import pytest
-
 from src.transformations.weather import transform_weather_silver
 
 def test_transform_weather_silver_standardizes_columns(spark):

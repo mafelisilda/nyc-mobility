@@ -11,7 +11,9 @@ def transform_weather_silver(df: DataFrame) -> DataFrame:
         df
         .withColumn(
             "weather_datetime",
-            F.to_timestamp("time", "yyyy-MM-dd'T'HH:mm"),
+            F.expr(
+                "try_to_timestamp(time, \"yyyy-MM-dd'T'HH:mm\")"
+            ),
         )
         .withColumn(
             "temperature_c",

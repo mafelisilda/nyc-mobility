@@ -1,5 +1,3 @@
-import pytest
-
 from src.ingestion.weather import (
     add_weather_bronze_metadata,
     build_weather_url,

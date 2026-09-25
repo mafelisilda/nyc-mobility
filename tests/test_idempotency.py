@@ -1,5 +1,3 @@
-import pytest
-
 from src.ingestion.taxi import file_already_processed
 
 def test_file_already_processed_returns_true_for_existing_file(

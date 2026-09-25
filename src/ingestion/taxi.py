@@ -36,7 +36,6 @@ def add_bronze_metadata(
         )
     )
 
-
 def file_already_processed(
     spark,
     table_name: str,
@@ -47,30 +46,50 @@ def file_already_processed(
     Return False only when the Bronze table does not yet exist.
     """
 
-    catalog_name, schema_name, short_table_name = (
-        table_name.split(".")
-    )
+    parts = table_name.split(".")
 
-    table_exists = (
-        spark.sql(
-            f"""
-            SHOW TABLES IN `{catalog_name}`.`{schema_name}`
-            LIKE '{short_table_name}'
-            """
+    if len(parts) == 3:
+        catalog_name, schema_name, short_table_name = parts
+
+        table_exists = (
+            spark.sql(
+                f"""
+                SHOW TABLES IN `{catalog_name}`.`{schema_name}`
+                LIKE '{short_table_name}'
+                """
+            )
+            .limit(1)
+            .count()
+            > 0
         )
-        .limit(1)
-        .count()
-        > 0
-    )
+
+    elif len(parts) == 2:
+        schema_name, short_table_name = parts
+
+        table_exists = (
+            spark.sql(
+                f"""
+                SHOW TABLES IN `{schema_name}`
+                LIKE '{short_table_name}'
+                """
+            )
+            .limit(1)
+            .count()
+            > 0
+        )
+
+    else:
+        raise ValueError(
+            "table_name must be either "
+            "'schema.table' or 'catalog.schema.table'"
+        )
 
     if not table_exists:
         return False
 
     return (
         spark.table(table_name)
-        .filter(
-            F.col("source_file") == source_file
-        )
+        .filter(F.col("source_file") == source_file)
         .limit(1)
         .count()
         > 0

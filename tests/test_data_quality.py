@@ -1,5 +1,3 @@
-import pytest
-
 from src.quality.checks import (
     count_duplicates,
     count_nulls,

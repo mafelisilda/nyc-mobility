@@ -1,6 +1,3 @@
-
-import pytest
-
 from src.ingestion.taxi import add_bronze_metadata
 
 def test_add_bronze_metadata(spark):
