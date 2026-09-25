@@ -1,12 +1,14 @@
 # Data Dictionary
 
-This document describes the main tables and fields used in the NYC Mobility data pipeline.
+This document describes the primary data tables and fields used in the NYC Mobility pipeline.
 
 The project follows a Medallion architecture:
 
+```text
 Bronze → Silver → Gold
+```
 
-Bronze preserves source data and ingestion metadata, Silver contains cleaned and standardized records, and Gold contains analytics-ready dimensional tables.
+Bronze preserves source data and ingestion metadata. Silver contains standardized and validated records. Gold contains analytics-ready dimensional tables.
 
 ---
 
@@ -47,10 +49,10 @@ One row represents one NYC Green Taxi trip as received from the monthly source P
 
 | Column | Description |
 |---|---|
-| `source_system` | Source system identifier, currently `nyc_tlc_green_taxi` |
-| `source_file` | Name of the Parquet file from which the record was ingested |
+| `source_system` | Source system identifier |
+| `source_file` | Source Parquet filename |
 | `source_month` | Expected source month in `YYYY-MM` format |
-| `batch_id` | Identifier for the ingestion batch |
+| `batch_id` | Ingestion batch identifier |
 | `ingested_at` | Timestamp when the record was ingested into Bronze |
 
 ---
@@ -67,10 +69,10 @@ One row represents one hourly Open-Meteo weather observation for the representat
 | `temperature_2m` | Air temperature at 2 meters above ground level in degrees Celsius |
 | `precipitation` | Hourly precipitation amount in millimeters |
 | `weather_code` | Open-Meteo weather condition code |
-| `source_system` | Source system identifier, currently `open_meteo` |
+| `source_system` | Source system identifier |
 | `source_url` | API URL used to retrieve the observation batch |
-| `batch_id` | Identifier for the monthly weather ingestion batch |
-| `ingested_at` | Timestamp when the record was ingested into Bronze |
+| `batch_id` | Monthly weather ingestion batch identifier |
+| `ingested_at` | Ingestion timestamp |
 
 ---
 
@@ -83,13 +85,13 @@ One row represents one NYC TLC Taxi Zone.
 | Column | Description |
 |---|---|
 | `LocationID` | TLC Taxi Zone identifier |
-| `Borough` | NYC borough associated with the taxi zone |
+| `Borough` | NYC borough associated with the zone |
 | `Zone` | Taxi zone name |
 | `service_zone` | TLC service-zone classification |
-| `source_system` | Source system identifier, currently `nyc_tlc_taxi_zones` |
-| `source_url` | URL of the Taxi Zone lookup CSV |
-| `batch_id` | Identifier for the taxi-zone ingestion batch |
-| `ingested_at` | Timestamp when the lookup data was ingested |
+| `source_system` | Source system identifier |
+| `source_url` | Source CSV URL |
+| `batch_id` | Ingestion batch identifier |
+| `ingested_at` | Ingestion timestamp |
 
 ---
 
@@ -101,7 +103,7 @@ One row represents one NYC TLC Taxi Zone.
 
 One row represents one cleaned and valid NYC Green Taxi trip.
 
-The Silver transformation removes invalid records and duplicate trips.
+The Silver Taxi transformation standardizes fields, calculates trip duration, generates a deterministic `trip_hash`, routes invalid row-level records to quarantine, and deduplicates valid trips.
 
 ### Standardized Fields
 
@@ -111,7 +113,7 @@ The Silver transformation removes invalid records and duplicate trips.
 | `dropoff_location_id` | Standardized dropoff Taxi Zone identifier derived from `DOLocationID` |
 | `pickup_datetime` | Pickup timestamp standardized to Spark timestamp type |
 | `dropoff_datetime` | Dropoff timestamp standardized to Spark timestamp type |
-| `trip_duration_minutes` | Trip duration calculated as dropoff time minus pickup time, in minutes |
+| `trip_duration_minutes` | Trip duration in minutes |
 | `trip_hash` | Deterministic SHA-256 technical identifier used for deduplication |
 | `passenger_count` | Number of passengers |
 | `trip_distance` | Reported trip distance |
@@ -134,19 +136,71 @@ The Silver transformation removes invalid records and duplicate trips.
 - trip distance
 - total amount
 
-The hash is used as a deterministic technical trip identifier because the source does not provide a unique trip ID suitable for the project.
+### Valid Record Rules
 
-### Record Validation Rules
+A Taxi record remains in the valid Silver table when:
 
-A taxi record must satisfy the following conditions to remain in Silver:
-
-- pickup timestamp is not null
-- dropoff timestamp is not null
+- pickup timestamp is valid and non-null
+- dropoff timestamp is valid and non-null
 - dropoff timestamp is greater than or equal to pickup timestamp
 - pickup location ID is not null
 - dropoff location ID is not null
+- `source_month` is not null
 - pickup month matches `source_month`
-- `trip_hash` is unique after deduplication
+
+Valid rows are deduplicated using `trip_hash`.
+
+---
+
+## `nyc_mobility.silver.taxi_trips_quarantine`
+
+### Purpose
+
+Stores Taxi records that fail row-level data-quality rules during the Bronze-to-Silver transformation.
+
+Quarantined records are retained for auditing, troubleshooting, and monitoring. They do not continue into the Gold analytical model.
+
+### Grain
+
+One row represents one rejected NYC Green Taxi record.
+
+### Main Fields
+
+| Column | Description |
+|---|---|
+| `lpep_pickup_datetime` | Original pickup timestamp from Bronze |
+| `lpep_dropoff_datetime` | Original dropoff timestamp from Bronze |
+| `pickup_location_id` | Standardized pickup Taxi Zone identifier |
+| `dropoff_location_id` | Standardized dropoff Taxi Zone identifier |
+| `pickup_datetime` | Standardized pickup timestamp |
+| `dropoff_datetime` | Standardized dropoff timestamp |
+| `trip_duration_minutes` | Calculated trip duration in minutes |
+| `trip_hash` | Deterministic technical trip identifier |
+| `passenger_count` | Number of passengers when available |
+| `trip_distance` | Reported trip distance |
+| `fare_amount` | Base fare amount |
+| `total_amount` | Total passenger charge |
+| `source_system` | Original Bronze source system |
+| `source_file` | Original source filename |
+| `source_month` | Expected source month |
+| `batch_id` | Original ingestion batch identifier |
+| `ingested_at` | Original Bronze ingestion timestamp |
+| `quarantine_reason` | Primary row-level quality rule that caused the record to be quarantined |
+| `quarantined_at` | Timestamp when the record was written to quarantine |
+
+### Supported Quarantine Reasons
+
+| Quarantine Reason | Meaning |
+|---|---|
+| `NULL_OR_INVALID_PICKUP_TIMESTAMP` | Pickup timestamp is missing or invalid |
+| `NULL_OR_INVALID_DROPOFF_TIMESTAMP` | Dropoff timestamp is missing or invalid |
+| `DROPOFF_BEFORE_PICKUP` | Dropoff occurs before pickup |
+| `NULL_PICKUP_LOCATION` | Pickup Taxi Zone identifier is missing |
+| `NULL_DROPOFF_LOCATION` | Dropoff Taxi Zone identifier is missing |
+| `NULL_SOURCE_MONTH` | `source_month` is missing |
+| `PICKUP_MONTH_MISMATCH` | Pickup timestamp month does not match `source_month` |
+
+Each quarantined record is assigned one primary quarantine reason.
 
 ---
 
@@ -158,7 +212,7 @@ One row represents one standardized hourly weather observation.
 
 | Column | Description |
 |---|---|
-| `weather_datetime` | Weather observation timestamp converted to Spark timestamp type |
+| `weather_datetime` | Weather observation timestamp converted to Spark timestamp |
 | `temperature_c` | Temperature in degrees Celsius |
 | `precipitation_mm` | Precipitation amount in millimeters |
 | `weather_code` | Integer Open-Meteo weather condition code |
@@ -188,54 +242,43 @@ One row represents one standardized NYC Taxi Zone.
 | `batch_id` | Taxi-zone ingestion batch identifier |
 | `ingested_at` | Original ingestion timestamp |
 
-`location_id` is unique in the Silver taxi-zone table.
+`location_id` is unique in the Silver Taxi Zone table.
 
 ---
 
 # Gold Layer
 
-The Gold layer uses a dimensional model centered on taxi trips.
+The Gold layer uses a dimensional model centered on Taxi trips.
 
-The grain of `fact_trip` is:
-
-**one row per valid NYC Green Taxi trip**
+Only valid records from `nyc_mobility.silver.taxi_trips` flow into Gold. Quarantined Taxi records do not enter the analytical model.
 
 ---
 
 ## `nyc_mobility.gold.fact_trip`
 
-### Purpose
+### Grain
 
-Stores trip-level facts and foreign keys used to analyze mobility, location, time, and weather.
+One row represents one valid NYC Green Taxi trip.
 
 | Column | Type | Key | Description |
 |---|---|---|---|
 | `trip_key` | BIGINT | PK | Deterministic surrogate key generated from `trip_hash` |
 | `trip_hash` | STRING | Technical Key | Deterministic SHA-256 trip identifier inherited from Silver |
-| `pickup_date_key` | INT | FK | References `dim_date.date_key` for the pickup date |
-| `dropoff_date_key` | INT | FK | References `dim_date.date_key` for the dropoff date |
-| `pickup_hour_key` | INT | FK | References `dim_hour.hour_key` for the pickup hour |
-| `dropoff_hour_key` | INT | FK | References `dim_hour.hour_key` for the dropoff hour |
-| `pickup_zone_key` | BIGINT | FK | References `dim_zone.zone_key` for the pickup zone |
-| `dropoff_zone_key` | BIGINT | FK | References `dim_zone.zone_key` for the dropoff zone |
-| `weather_key` | BIGINT | FK | References `dim_weather.weather_key` based on weather at the pickup hour |
+| `pickup_date_key` | INT | FK | References `dim_date.date_key` for pickup date |
+| `dropoff_date_key` | INT | FK | References `dim_date.date_key` for dropoff date |
+| `pickup_hour_key` | INT | FK | References `dim_hour.hour_key` for pickup hour |
+| `dropoff_hour_key` | INT | FK | References `dim_hour.hour_key` for dropoff hour |
+| `pickup_zone_key` | BIGINT | FK | References `dim_zone.zone_key` for pickup zone |
+| `dropoff_zone_key` | BIGINT | FK | References `dim_zone.zone_key` for dropoff zone |
+| `weather_key` | BIGINT | FK | References `dim_weather.weather_key` using weather at pickup hour |
 | `passenger_count` | BIGINT | Measure | Number of passengers |
 | `trip_distance` | DOUBLE | Measure | Trip distance |
-| `trip_duration_minutes` | DOUBLE | Measure | Duration of the trip in minutes |
-| `fare_amount` | DOUBLE | Measure | Base fare charged |
-| `total_amount` | DOUBLE | Measure | Total amount charged to the passenger |
-| `temperature_c` | DOUBLE | Measure | Exact temperature at the pickup hour |
-| `precipitation_mm` | DOUBLE | Measure | Exact precipitation amount at the pickup hour |
-| `trip_count` | INT | Measure | Constant value of `1`, used for aggregation |
-
-### Fact Relationships
-
-`fact_trip` relates to:
-
-- `dim_date` twice, for pickup and dropoff dates
-- `dim_hour` twice, for pickup and dropoff hours
-- `dim_zone` twice, for pickup and dropoff zones
-- `dim_weather` once, using weather at the pickup hour
+| `trip_duration_minutes` | DOUBLE | Measure | Trip duration in minutes |
+| `fare_amount` | DOUBLE | Measure | Base fare amount |
+| `total_amount` | DOUBLE | Measure | Total passenger charge |
+| `temperature_c` | DOUBLE | Measure | Exact temperature at pickup hour |
+| `precipitation_mm` | DOUBLE | Measure | Exact precipitation at pickup hour |
+| `trip_count` | INT | Measure | Constant value `1` used for aggregation |
 
 ---
 
@@ -243,7 +286,7 @@ Stores trip-level facts and foreign keys used to analyze mobility, location, tim
 
 ### Grain
 
-One row represents one calendar date appearing in valid taxi pickup or dropoff data.
+One row represents one calendar date appearing in valid Taxi pickup or dropoff data.
 
 | Column | Type | Key | Description |
 |---|---|---|---|
@@ -251,7 +294,7 @@ One row represents one calendar date appearing in valid taxi pickup or dropoff d
 | `full_date` | DATE |  | Calendar date |
 | `year` | INT |  | Calendar year |
 | `quarter` | INT |  | Calendar quarter |
-| `month` | INT |  | Month number from 1 to 12 |
+| `month` | INT |  | Month number |
 | `month_name` | STRING |  | Full month name |
 | `day_of_month` | INT |  | Day number within the month |
 | `day_of_week` | INT |  | Spark day-of-week value |
@@ -259,7 +302,7 @@ One row represents one calendar date appearing in valid taxi pickup or dropoff d
 | `week_of_year` | INT |  | Week number within the year |
 | `is_weekend` | BOOLEAN |  | Indicates whether the date is Saturday or Sunday |
 
-`dim_date` is a role-playing dimension used by both pickup and dropoff date foreign keys.
+`dim_date` is reused for pickup and dropoff dates.
 
 ---
 
@@ -267,27 +310,25 @@ One row represents one calendar date appearing in valid taxi pickup or dropoff d
 
 ### Grain
 
-One row represents one hour of the day.
-
-The dimension contains exactly 24 rows.
+One row represents one hour of the day. The table contains exactly 24 rows.
 
 | Column | Type | Key | Description |
 |---|---|---|---|
 | `hour_key` | INT | PK | Hour value from 0 to 23 |
 | `hour_of_day` | BIGINT |  | Hour number from 0 to 23 |
-| `hour_label` | STRING |  | Readable hourly label such as `08:00` |
+| `hour_label` | STRING |  | Readable label such as `08:00` |
 | `day_period` | STRING |  | Broad time-of-day category |
 
 ### Day Period Rules
 
 | Hours | Day Period |
 |---|---|
-| 00:00–05:59 | Late Night |
-| 06:00–11:59 | Morning |
-| 12:00–17:59 | Afternoon |
-| 18:00–23:59 | Evening |
+| 00:00-05:59 | Late Night |
+| 06:00-11:59 | Morning |
+| 12:00-17:59 | Afternoon |
+| 18:00-23:59 | Evening |
 
-`dim_hour` is a role-playing dimension used by both pickup and dropoff hour foreign keys.
+`dim_hour` is reused for pickup and dropoff hours.
 
 ---
 
@@ -305,7 +346,7 @@ One row represents one NYC Taxi Zone.
 | `zone` | STRING |  | Taxi zone name |
 | `service_zone` | STRING |  | TLC service-zone classification |
 
-`dim_zone` is a role-playing dimension used for both pickup and dropoff locations.
+`dim_zone` is reused for pickup and dropoff locations.
 
 ---
 
@@ -318,14 +359,12 @@ One row represents one distinct combination of descriptive weather attributes.
 | Column | Type | Key | Description |
 |---|---|---|---|
 | `weather_key` | BIGINT | PK | Deterministic surrogate key generated from weather categories |
-| `weather_condition` | STRING |  | High-level weather condition category |
+| `weather_condition` | STRING |  | High-level weather condition |
 | `temperature_band` | STRING |  | Temperature range category |
 | `precipitation_band` | STRING |  | Precipitation intensity category |
 | `is_raining` | BOOLEAN |  | Indicates whether precipitation is greater than zero |
 
 ### Weather Condition Categories
-
-Open-Meteo `weather_code` values are grouped into:
 
 - Clear
 - Cloudy
@@ -354,7 +393,20 @@ Open-Meteo `weather_code` values are grouped into:
 | 2.5 mm ≤ precipitation < 7.5 mm | `Moderate` |
 | precipitation ≥ 7.5 mm | `Heavy` |
 
-Exact temperature and precipitation values are retained in `fact_trip`. The dimension contains categorical versions intended for grouping and analytical slicing.
+Exact `temperature_c` and `precipitation_mm` values are retained in `fact_trip`.
+
+---
+
+# Data Quality Handling Summary
+
+| Dataset / Issue | Action |
+|---|---|
+| Taxi row-level defect | Quarantine |
+| Taxi duplicate trip | Deduplicate |
+| Weather completeness or integrity failure | Fail validation |
+| Taxi Zone completeness or key-integrity failure | Fail validation |
+| Gold key or referential-integrity failure | Fail validation |
+| All required checks satisfied | Pass |
 
 ---
 
@@ -362,13 +414,13 @@ Exact temperature and precipitation values are retained in `fact_trip`. The dime
 
 ## Primary Keys
 
-Gold dimensional tables use deterministic keys:
+Gold tables use deterministic keys:
 
+- `trip_key`
 - `date_key`
 - `hour_key`
 - `zone_key`
 - `weather_key`
-- `trip_key`
 
 ## Business Keys
 
@@ -376,17 +428,12 @@ Source-system identifiers are retained where appropriate.
 
 For example:
 
-- `dim_zone.location_id`
-
-is the original TLC Taxi Zone identifier, while:
-
-- `dim_zone.zone_key`
-
-is the warehouse surrogate key.
+- `dim_zone.location_id` is the original TLC Taxi Zone identifier.
+- `dim_zone.zone_key` is the warehouse surrogate key.
 
 ## Foreign Keys
 
-Foreign keys in `fact_trip` reference Gold dimensions:
+`fact_trip` contains:
 
 - `pickup_date_key`
 - `dropoff_date_key`
@@ -396,10 +443,15 @@ Foreign keys in `fact_trip` reference Gold dimensions:
 - `dropoff_zone_key`
 - `weather_key`
 
-The Gold validation process verifies that these foreign keys are populated.
+Gold validation verifies these relationships.
 
 ## Metadata
 
-Ingestion metadata is retained through Bronze and Silver to support lineage and troubleshooting.
+Ingestion metadata is retained through Bronze and Silver for lineage and troubleshooting.
+
+Taxi quarantine additionally records:
+
+- `quarantine_reason`
+- `quarantined_at`
 
 Gold focuses on analytical attributes, measures, and dimensional relationships.
