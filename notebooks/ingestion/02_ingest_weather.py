@@ -3,6 +3,8 @@
 # COMMAND ----------
 # 1. IMPORTS
 
+import re
+
 from calendar import monthrange
 from datetime import date
 
@@ -17,8 +19,9 @@ from src.ingestion.weather import (
 # COMMAND ----------
 # 2. CONFIGURATION
 
-TAXI_BRONZE_TABLE = (
-    "nyc_mobility.bronze.green_taxi"
+GREEN_TAXI_BASE_PATH = (
+    "r2://ftw-b12-dataengineering@6338489909d41c2f78a0a2345a684267."
+    "r2.cloudflarestorage.com/groups/week-08/group-c/landing/green_taxi"
 )
 
 WEATHER_BRONZE_TABLE = (
@@ -30,47 +33,59 @@ NYC_LONGITUDE = -74.0060
 
 MIN_SOURCE_MONTH = "2026-03"
 
-
-# COMMAND ----------
-# 3. DISCOVER TAXI MONTHS
-
-taxi = spark.table(
-    TAXI_BRONZE_TABLE
+FILE_PATTERN = re.compile(
+    r"^green_tripdata_(\d{4}-\d{2})\.parquet$"
 )
 
-taxi_months = sorted(
-    {
-        row["source_month"]
-        for row in (
-            taxi
-            .select("source_month")
-            .distinct()
-            .collect()
-        )
-        if (
-            row["source_month"]
-            and row["source_month"]
-            >= MIN_SOURCE_MONTH
-        )
-    }
+
+# COMMAND ----------
+# 3. DISCOVER AVAILABLE MONTHS FROM LANDING
+
+landing_entries = dbutils.fs.ls(
+    GREEN_TAXI_BASE_PATH
+)
+
+available_months = []
+
+for entry in landing_entries:
+
+    match = FILE_PATTERN.match(
+        entry.name
+    )
+
+    if not match:
+        continue
+
+    source_month = match.group(1)
+
+    if source_month < MIN_SOURCE_MONTH:
+        continue
+
+    available_months.append(
+        source_month
+    )
+
+
+available_months = sorted(
+    set(available_months)
 )
 
 print(
-    f"Taxi months available: "
-    f"{taxi_months}"
+    f"Available source months: "
+    f"{available_months}"
 )
 
-assert len(taxi_months) > 0, (
-    "No taxi source months are available."
+assert len(available_months) > 0, (
+    "No valid monthly taxi source files were found."
 )
 
 
 # COMMAND ----------
-# 4. FIND WEATHER MONTHS THAT ARE MISSING
+# 4. FIND MISSING WEATHER MONTHS
 
 missing_weather_months = []
 
-for process_month in taxi_months:
+for process_month in available_months:
 
     batch_id = (
         f"weather_"
@@ -86,15 +101,18 @@ for process_month in taxi_months:
     )
 
     if already_processed:
+
         print(
             f"SKIP: {batch_id} "
             "has already been processed."
         )
 
     else:
+
         missing_weather_months.append(
             process_month
         )
+
 
 print(
     "Weather months to ingest: "
@@ -134,19 +152,11 @@ for process_month in missing_weather_months:
         days_in_month,
     )
 
-    start_date_str = (
-        start_date.isoformat()
-    )
-
-    end_date_str = (
-        end_date.isoformat()
-    )
-
     source_url = build_weather_url(
         latitude=NYC_LATITUDE,
         longitude=NYC_LONGITUDE,
-        start_date=start_date_str,
-        end_date=end_date_str,
+        start_date=start_date.isoformat(),
+        end_date=end_date.isoformat(),
     )
 
     batch_id = (
@@ -185,8 +195,8 @@ for process_month in missing_weather_months:
 
     assert len(rows) == expected_hours, (
         f"Incomplete weather batch for "
-        f"{process_month}: "
-        f"expected {expected_hours}, "
+        f"{process_month}. "
+        f"Expected {expected_hours}, "
         f"received {len(rows)}."
     )
 
@@ -224,20 +234,18 @@ for process_month in missing_weather_months:
 
 
 # COMMAND ----------
-# 6. FINAL WEATHER VALIDATION
+# 6. FINAL SUMMARY
 
 weather = spark.table(
     WEATHER_BRONZE_TABLE
 )
 
-weather_batch_counts = (
+display(
     weather
     .groupBy("batch_id")
     .count()
     .orderBy("batch_id")
 )
-
-display(weather_batch_counts)
 
 print(
     f"Total Weather Bronze rows: "
